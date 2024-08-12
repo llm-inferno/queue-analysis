@@ -64,6 +64,7 @@ func main() {
 	}
 }
 
+// Function used in binary search (target service time)
 func EvalServTime(x float32) (float32, error) {
 	model.Solve(x, 1)
 	if !model.IsValid() {
@@ -80,5 +81,3 @@ func EvalWaitingTime(x float32) (float32, error) {
 	}
 	return model.GetAvgWaitTime(), nil
 }
-
-// Function used in binary search (target service time)
