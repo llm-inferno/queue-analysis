@@ -85,6 +85,7 @@ func (m *MM1ModelStateDependent) computeProbabilities() {
 			for i := 0; i <= n; i++ {
 				m.p[i] /= scale
 			}
+			m.p[n+1] = m.p[n] * float64(m.lambda) / sRate
 		}
 	}
 
