@@ -7,8 +7,6 @@ import (
 	"github.ibm.com/tantawi/queue-analysis/pkg/utils"
 )
 
-var model *queue.MM1ModelStateDependent
-
 func main() {
 
 	// Service: tau(n) = alpha + n * beta
@@ -44,13 +42,14 @@ func main() {
 				servRate[n-1] = float32(n) / (alpha + beta*float32(n))
 			}
 
-			model = queue.NewMM1ModelStateDependent(occupancyUpperBound, servRate)
+			model := queue.NewMM1ModelStateDependent(occupancyUpperBound, servRate)
 
 			// bounds on arrival rate
 			lambdaMin := servRate[0] * delta
 			lambdaMax := servRate[maxBatchSize-1] * (1 - delta)
+			utils.Model = model
 
-			lambdaStar, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, EvalWaitingTime)
+			lambdaStar, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, utils.EvalWaitingTime)
 
 			if err == nil {
 				model.Solve(lambdaStar, 1)
@@ -71,22 +70,4 @@ func main() {
 		}
 	}
 
-}
-
-// Function used in binary search (target service time)
-func EvalServTime(x float32) (float32, error) {
-	model.Solve(x, 1)
-	if !model.IsValid() {
-		return 0, fmt.Errorf("invalid model %v", model)
-	}
-	return model.GetAvgServTime(), nil
-}
-
-// Function used in binary search (target waiting time)
-func EvalWaitingTime(x float32) (float32, error) {
-	model.Solve(x, 1)
-	if !model.IsValid() {
-		return 0, fmt.Errorf("invalid model %v", model)
-	}
-	return model.GetAvgWaitTime(), nil
 }

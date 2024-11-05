@@ -3,6 +3,8 @@ package utils
 import (
 	"fmt"
 	"math"
+
+	"github.ibm.com/tantawi/queue-analysis/pkg/queue"
 )
 
 var epsilon float32 = 1e-6
@@ -67,4 +69,25 @@ func BinarySearch(xMin float32, xMax float32, yTarget float32,
 		}
 	}
 	return xStar, 0, nil
+}
+
+// model as global variable, accesses by eval functions
+var Model *queue.MM1ModelStateDependent
+
+// Function used in binary search (target service time)
+func EvalServTime(x float32) (float32, error) {
+	Model.Solve(x, 1)
+	if !Model.IsValid() {
+		return 0, fmt.Errorf("invalid model %v", Model)
+	}
+	return Model.GetAvgServTime(), nil
+}
+
+// Function used in binary search (target waiting time)
+func EvalWaitingTime(x float32) (float32, error) {
+	Model.Solve(x, 1)
+	if !Model.IsValid() {
+		return 0, fmt.Errorf("invalid model %v", Model)
+	}
+	return Model.GetAvgWaitTime(), nil
 }
