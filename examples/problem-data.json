@@ -1,0 +1,10 @@
+{
+    "RPM": 30,
+    "maxBatchSize": 48,
+    "avgNumTokens": 1024,
+    "alpha": 19,
+    "beta": 1,
+    "maxQueueSize": 200,
+    "targetWait": 1.0,
+    "targetITL": 50.0
+}

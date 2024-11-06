@@ -1,0 +1,10 @@
+{
+    "throughput": 35.200314,
+    "avgRespTime": 51.532883,
+    "avgWaitTime": 0.33288673,
+    "avgNumInServ": 30.037598,
+    "avgTokenTime": 49.999996,
+    "maxRPM": 41.93564,
+    "RMPTargetWait": 36.61307,
+    "RPMTargetITL": 35.200314
+}
