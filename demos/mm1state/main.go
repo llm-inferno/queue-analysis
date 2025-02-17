@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.ibm.com/tantawi/queue-analysis/pkg/queue"
-	"github.ibm.com/tantawi/queue-analysis/pkg/utils"
+	"github.ibm.com/modeling-analysis/queue-analysis/pkg/queue"
+	"github.ibm.com/modeling-analysis/queue-analysis/pkg/utils"
 )
 
 // Limits: N max number in service; K max number in system

@@ -1,4 +1,4 @@
-module github.ibm.com/tantawi/queue-analysis
+module github.ibm.com/modeling-analysis/queue-analysis
 
 go 1.22
 

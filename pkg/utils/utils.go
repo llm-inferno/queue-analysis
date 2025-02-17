@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.ibm.com/tantawi/queue-analysis/pkg/queue"
+	"github.ibm.com/modeling-analysis/queue-analysis/pkg/queue"
 )
 
 var epsilon float32 = 1e-6
