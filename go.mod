@@ -1,4 +1,4 @@
-module github.ibm.com/modeling-analysis/queue-analysis
+module github.com/llm-inferno/queue-analysis
 
 go 1.23
 
