@@ -1,6 +1,6 @@
 
 # Start from golang base image
-FROM golang:alpine as builder
+FROM golang:alpine AS builder
 
 # Update
 RUN apk update
