@@ -2,7 +2,12 @@ module github.com/llm-inferno/queue-analysis
 
 go 1.23
 
-require github.com/gin-gonic/gin v1.10.0
+replace queue-analysis => .
+
+require (
+	github.com/gin-gonic/gin v1.10.0
+	queue-analysis v0.0.0-00010101000000-000000000000
+)
 
 require (
 	github.com/bytedance/sonic v1.12.8 // indirect

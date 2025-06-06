@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/llm-inferno/queue-analysis/pkg/queue"
+	"queue-analysis/pkg/queue"
 )
 
 func main() {

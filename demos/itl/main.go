@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/llm-inferno/queue-analysis/pkg/queue"
-	"github.com/llm-inferno/queue-analysis/pkg/utils"
+	"queue-analysis/pkg/queue"
+	"queue-analysis/pkg/utils"
 )
 
 func main() {
