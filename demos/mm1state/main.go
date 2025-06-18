@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"queue-analysis/pkg/queue"
-	"queue-analysis/pkg/utils"
+	"github.com/llm-inferno/queue-analysis/pkg/queue"
+	"github.com/llm-inferno/queue-analysis/pkg/utils"
 )
 
 // Limits: N max number in service; K max number in system

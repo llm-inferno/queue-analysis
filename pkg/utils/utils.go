@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"queue-analysis/pkg/queue"
+	"github.com/llm-inferno/queue-analysis/pkg/queue"
 )
 
 var epsilon float32 = 1e-6

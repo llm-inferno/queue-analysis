@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"queue-analysis/pkg/queue"
-	"queue-analysis/pkg/utils"
+	"github.com/llm-inferno/queue-analysis/pkg/queue"
+	"github.com/llm-inferno/queue-analysis/pkg/utils"
 )
 
 // parameters
