@@ -148,12 +148,26 @@ The server may run in the following ways.
 
 ## Usage
 
-Then, the server may be invoked as:
+Then, the server may be invoked as follows.
+
+- Using json files
 
 ``` bash
 curl -X POST http://localhost:8080/solve -d @<problem-data-json-file>
 
 curl -X POST http://localhost:8080/target -d @<problem-data-json-file>
+```
+
+- Data in command line
+
+``` json
+curl -X POST http://localhost:8080/solve \
+  --header "Content-Type: application/json" \
+  --data '{"alpha": 8.0, "beta": 0.06, "maxBatchSize": 512, "maxQueueSize": 1000, "avgNumTokens": 494, "RPM": 276}'
+
+curl -X POST http://localhost:8080/target \
+  --header "Content-Type: application/json" \
+  --data '{"alpha": 8.0, "beta": 0.06, "maxBatchSize": 512, "maxQueueSize": 1000, "avgNumTokens": 494, "targetWait": 1000, "targetITL": 10}'
 ```
 
 ## Description
