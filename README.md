@@ -155,3 +155,18 @@ curl -X POST http://localhost:8080/solve -d @<problem-data-json-file>
 
 curl -X POST http://localhost:8080/target -d @<problem-data-json-file>
 ```
+
+## Description
+
+The model analyzer maintains an analytical performance model for each variant (server) in the system. Such a performance model captures the statistical behavior of requests as they pass through a server, including queueing and processing times, as a function load characteristics, such as request rates and sizes (input and output tokens), and server characteristics such as GPU type and configuration (P/D disaggregation, chunked prefill, etc). The performance model may be based on queueing theory, machine learning techniques, or other mechanisms.
+
+![description](docs/model-analyzer.png)
+
+The purpose of using a performance model is twofold.
+
+- Performance evaluation: Estimate performance metrics such as waiting time, TTFT, ITL, and TPOT, as a function of a given load and server characteristics.
+
+- Target sizing: Determine load and/or server characteristics in order to attain target values of performance metrics.
+The former is used to estimate performance given the current and/or predicted/anticipated environment. Whereas, the latter is mainly used by the Optimizer to assess maximum request rate to guarantee given SLOs, as well as the impact of a choice of a particular GPU type.
+
+Typically, analytical performance models have their own internal parameters. For example, a model might approximate ITL, as a function of the batch size, by a linear function. The base and slope of the linear function are parameters of the model. In this case, the determination of such parameters may be achieved through offline benchmarking and/or online through observations and tuning (dynamic adjustment of parameter values to match observations).
