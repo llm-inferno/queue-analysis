@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: queue
+  name: queue-analyzer
 spec:
   containers:
-  - name: queue
-    image: queue
+  - name: queue-analyzer
+    image: queue-analyzer
     imagePullPolicy: IfNotPresent
     ports:
     - containerPort: 8080

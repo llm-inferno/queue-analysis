@@ -120,15 +120,15 @@ The server may run in the following ways.
     Build and run the image:
 
     ``` bash
-    docker build -t queue .
-    docker run -d -p 8080:8080 --name queue queue
+    docker build -t queue-analyzer .
+    docker run -d -p 8080:8080 --name queue-analyzer queue-analyzer
     ```
 
     To stop and remove the container after usage:
 
     ``` bash
-    docker stop queue
-    docker rm queue
+    docker stop queue-analyzer
+    docker rm queue-analyzer
     ```
 
 - Kubernetes cluster
@@ -137,7 +137,7 @@ The server may run in the following ways.
 
     ``` bash
     kubectl create -f yamls/pod.yaml
-    kubectl port-forward queue 8080:8080
+    kubectl port-forward queue-analyzer 8080:8080
     ```
 
     To delete the pod after usage:
@@ -163,11 +163,11 @@ curl -X POST http://localhost:8080/target -d @<problem-data-json-file>
 ``` json
 curl -X POST http://localhost:8080/solve \
   --header "Content-Type: application/json" \
-  --data '{"alpha": 8.0, "beta": 0.06, "maxBatchSize": 512, "maxQueueSize": 1000, "avgNumTokens": 494, "RPM": 276}'
+  --data '{"alpha": 8.0, "beta": 0.1, "maxBatchSize": 24, "maxQueueSize": 1000, "avgNumTokens": 1024, "RPM": 100}' | jq
 
 curl -X POST http://localhost:8080/target \
   --header "Content-Type: application/json" \
-  --data '{"alpha": 8.0, "beta": 0.06, "maxBatchSize": 512, "maxQueueSize": 1000, "avgNumTokens": 494, "targetWait": 1000, "targetITL": 10}'
+  --data '{"alpha": 8.0, "beta": 0.1, "maxBatchSize": 24, "maxQueueSize": 1000, "avgNumTokens": 1024, "targetWait": 1, "targetITL": 10}' | jq
 ```
 
 ## Description
