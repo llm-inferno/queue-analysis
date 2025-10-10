@@ -18,7 +18,7 @@ func WithinTolerance(x, value, tolerance float32) bool {
 	if value == 0 || tolerance < 0 {
 		return false
 	}
-	return math.Abs(float64(x-value/value)) <= float64(tolerance)
+	return math.Abs(float64((x-value)/value)) <= float64(tolerance)
 }
 
 // Binary search: find xStar in a range [xMin, xMax] such that f(xStar)=yTarget.
@@ -33,7 +33,7 @@ func BinarySearch(xMin float32, xMax float32, yTarget float32,
 	}
 
 	// evaluate the function at the boundaries
-	var yBounds []float32 = make([]float32, 2)
+	yBounds := make([]float32, 2)
 	var err error
 	for i, x := range []float32{xMin, xMax} {
 		if yBounds[i], err = eval(x); err != nil {
@@ -54,7 +54,7 @@ func BinarySearch(xMin float32, xMax float32, yTarget float32,
 
 	// perform binary search
 	var xStar, yStar float32
-	for i := 0; i < maxIterations; i++ {
+	for range maxIterations {
 		xStar = 0.5 * (xMin + xMax)
 		if yStar, err = eval(xStar); err != nil {
 			return 0, 0, fmt.Errorf("invalid function evaluation: %v", err)
