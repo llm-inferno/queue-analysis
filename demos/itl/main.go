@@ -48,8 +48,8 @@ func main() {
 			lambdaMin := servRate[0] * delta
 			lambdaMax := servRate[maxBatchSize-1] * (1 - delta)
 
-			evalWaitingTime := utils.EvalWaitingTime(model)
-			lambdaStar, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, evalWaitingTime)
+			// find rate at which average waiting time is equal to target wait time
+			lambdaStar, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, utils.EvalWaitingTime(model))
 
 			if err == nil {
 				model.Solve(lambdaStar, 1)

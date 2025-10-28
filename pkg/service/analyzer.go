@@ -169,16 +169,14 @@ func target(c *gin.Context) {
 	model := queue.NewMM1ModelStateDependent(occupancyUpperBound, servRate)
 
 	// find max rate to achieve target service time
-	evalServTime := utils.EvalServTime(model)
-	lambdaStarService, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetServTime, evalServTime)
+	lambdaStarService, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetServTime, utils.EvalServTime(model))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "service target analysis error: ind=" + strconv.Itoa(ind)})
 		return
 	}
 
 	// find max rate to achieve target wait time
-	evalWaitingTime := utils.EvalWaitingTime(model)
-	lambdaStarWait, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, evalWaitingTime)
+	lambdaStarWait, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, utils.EvalWaitingTime(model))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "wait target analysis error: ind=" + strconv.Itoa(ind)})
 		return
