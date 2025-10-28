@@ -47,9 +47,9 @@ func main() {
 			// bounds on arrival rate
 			lambdaMin := servRate[0] * delta
 			lambdaMax := servRate[maxBatchSize-1] * (1 - delta)
-			utils.Model = model
 
-			lambdaStar, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, utils.EvalWaitingTime)
+			evalWaitingTime := utils.EvalWaitingTime(model)
+			lambdaStar, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, evalWaitingTime)
 
 			if err == nil {
 				model.Solve(lambdaStar, 1)

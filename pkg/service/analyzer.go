@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/llm-inferno/queue-analysis/pkg/queue"
@@ -166,19 +167,20 @@ func target(c *gin.Context) {
 
 	// create model
 	model := queue.NewMM1ModelStateDependent(occupancyUpperBound, servRate)
-	utils.Model = model
 
 	// find max rate to achieve target service time
-	lambdaStarService, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetServTime, utils.EvalServTime)
+	evalServTime := utils.EvalServTime(model)
+	lambdaStarService, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetServTime, evalServTime)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "service target analysis error: ind=" + string(ind)})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "service target analysis error: ind=" + strconv.Itoa(ind)})
 		return
 	}
 
 	// find max rate to achieve target wait time
-	lambdaStarWait, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, utils.EvalWaitingTime)
+	evalWaitingTime := utils.EvalWaitingTime(model)
+	lambdaStarWait, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, evalWaitingTime)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "wait target analysis error: ind=" + string(ind)})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "wait target analysis error: ind=" + strconv.Itoa(ind)})
 		return
 	}
 

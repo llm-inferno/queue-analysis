@@ -36,9 +36,9 @@ func main() {
 	delta := float32(0.001)
 	lambdaMin := servRate[0] * delta
 	lambdaMax := servRate[N-1] * (1 - delta)
-	utils.Model = model
 
-	lambdaStar, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetServTime, utils.EvalServTime)
+	evalServTime := utils.EvalServTime(model)
+	lambdaStar, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetServTime, evalServTime)
 	if err == nil {
 		fmt.Printf("targetServTime=%v, lambdaMin=%v; lambdaMax=%v; lambdaStar=%v; indicator=%d \n",
 			targetServTime, lambdaMin, lambdaMax, lambdaStar, ind)
@@ -52,7 +52,8 @@ func main() {
 	// (3) Find rate lambda at which the average waiting time is equal to the target waiting time
 	targetWaitTime := float32(1.0)
 
-	lambdaStar, ind, err = utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, utils.EvalWaitingTime)
+	evalWaitingTime := utils.EvalWaitingTime(model)
+	lambdaStar, ind, err = utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, evalWaitingTime)
 	if err == nil {
 		fmt.Printf("targetWaitTime=%v, lambdaMin=%v; lambdaMax=%v; lambdaStar=%v; indicator=%d \n",
 			targetWaitTime, lambdaMin, lambdaMax, lambdaStar, ind)

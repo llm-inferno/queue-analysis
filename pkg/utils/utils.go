@@ -71,23 +71,24 @@ func BinarySearch(xMin float32, xMax float32, yTarget float32,
 	return xStar, 0, nil
 }
 
-// model as global variable, accesses by eval functions
-var Model *queue.MM1ModelStateDependent
-
 // Function used in binary search (target service time)
-func EvalServTime(x float32) (float32, error) {
-	Model.Solve(x, 1)
-	if !Model.IsValid() {
-		return 0, fmt.Errorf("invalid model %v", Model)
+func EvalServTime(model *queue.MM1ModelStateDependent) func(x float32) (float32, error) {
+	return func(x float32) (float32, error) {
+		model.Solve(x, 1)
+		if !model.IsValid() {
+			return 0, fmt.Errorf("invalid model %v", model)
+		}
+		return model.GetAvgServTime(), nil
 	}
-	return Model.GetAvgServTime(), nil
 }
 
 // Function used in binary search (target waiting time)
-func EvalWaitingTime(x float32) (float32, error) {
-	Model.Solve(x, 1)
-	if !Model.IsValid() {
-		return 0, fmt.Errorf("invalid model %v", Model)
+func EvalWaitingTime(model *queue.MM1ModelStateDependent) func(x float32) (float32, error) {
+	return func(x float32) (float32, error) {
+		model.Solve(x, 1)
+		if !model.IsValid() {
+			return 0, fmt.Errorf("invalid model %v", model)
+		}
+		return model.GetAvgWaitTime(), nil
 	}
-	return Model.GetAvgWaitTime(), nil
 }
