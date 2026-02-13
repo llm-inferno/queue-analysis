@@ -13,28 +13,31 @@ Input to the server is a problem statement and output is the analysis solution. 
 ``` go
 // problem input data
 type ProblemData struct {
- RPM          float32 `json:"RPM"`          // request arrival rate (requests/min)
- MaxBatchSize int     `json:"maxBatchSize"` // maximum batch size
- AvgNumTokens int     `json:"avgNumTokens"` // average number of tokens per request
- Alpha        float32 `json:"alpha"`        // tau(n) = alpha + n * beta (msec)
- Beta         float32 `json:"beta"`         // tau(n) = alpha + n * beta (msec)
- MaxQueueSize int     `json:"maxQueueSize"` // maximum queue size
- TargetWait   float32 `json:"targetWait"`   // target queueing time (sec)
- TargetITL    float32 `json:"targetITL"`    // target inter-token interval (msec)
+ RPS             float32 `json:"RPS"`             // request arrival rate (requests/sec)
+ MaxBatchSize    int     `json:"maxBatchSize"`    // maximum batch size
+ AvgInputTokens  float32 `json:"avgInputTokens"`  // average number of input tokens per request
+ AvgOutputTokens float32 `json:"avgOutputTokens"` // average number of output tokens per request
+ Alpha           float32 `json:"alpha"`           // base iteration time (msec)
+ Beta            float32 `json:"beta"`            // slope for compute time (msec/token)
+ Gamma           float32 `json:"gamma"`           // slope for memory access time (msec/token*2)
+ MaxQueueSize    int     `json:"maxQueueSize"`    // maximum queue size
+ TargetTTFT      float32 `json:"targetTTFT"`      // target time to first token (msec)
+ TargetITL       float32 `json:"targetITL"`       // target inter-token interval (msec)
 }
 ```
 
 ``` go
 // analysis solution output data
 type AnalysisData struct {
- Throughput    float32 `json:"throughput"`    // effective throughput (requests/min)
+ Throughput    float32 `json:"throughput"`    // effective throughput (requests/sec)
  AvgRespTime   float32 `json:"avgRespTime"`   // average response time (sec)
  AvgWaitTime   float32 `json:"avgWaitTime"`   // average queueing time (sec)
  AvgNumInServ  float32 `json:"avgNumInServ"`  // average number of requests in system
- AvgTokenTime  float32 `json:"avgTokenTime"`  // average token time (msec)
- MaxRPM        float32 `json:"maxRPM"`        // maximum throughput (requests/min)
- RMPTargetWait float32 `json:"RMPTargetWait"` // RPM for target queueing time (requests/min)
- RPMTargetITL  float32 `json:"RPMTargetITL"`  // RPM for target ITL (requests/min)
+ AvgTTFT       float32 `json:"avgTTFT"`       // average time to first token (msec)
+ AvgITL        float32 `json:"avgITL"`        // average inter-token latency (msec)
+ MaxRPS        float32 `json:"maxRPS"`        // maximum throughput (requests/sec)
+ RPSTargetTTFT float32 `json:"RPSTargetTTFT"` // throughput to achieve target TTFT (requests/sec)
+ RPSTargetITL  float32 `json:"RPSTargetITL"`  // throughput to achieve target ITL (requests/sec)
 }
 ```
 
@@ -44,47 +47,51 @@ There are two operations:
 
 1. **\solve**
 
-    Analyze the queue given a set of parameters, namely: RPM, maxBatchSize, avgNumTokens, alpha, beta, and maxQueueSize.
+    Analyze the queue given a set of parameters, namely: RPS, maxBatchSize, alpha, beta, gamma, and maxQueueSize.
 
     ``` json
     {
-    "RPM": 30,
+    "RPS": 3.0,
     "maxBatchSize": 48,
-    "avgNumTokens": 1024,
-    "alpha": 19,
-    "beta": 1,
-    "maxQueueSize": 200
+    "AvgInputTokens": 128,
+    "AvgOutputTokens": 512,
+    "alpha": 12,
+    "beta": 0.05,
+    "gamma": 0.0005,
+    "maxQueueSize": 128
     }
     ```
 
-    The results of the analysis are: throughput, avgRespTime, avgWaitTime, avgNumInServ, avgTokenTime, and maxRPM.
+    The results of the analysis are: throughput, avgRespTime, avgWaitTime, avgNumInServ, avgTTFT, avgITL, and maxRPS.
 
     ``` json
     {
-    "throughput": 29.999998,
-    "avgRespTime": 41.96881,
-    "avgWaitTime": 0.0027617188,
-    "avgNumInServ": 20.983025,
-    "avgTokenTime": 40.98247,
-    "maxRPM": 41.93564,
-    "RMPTargetWait": 0,
-    "RPMTargetITL": 0
+    "throughput": 3,
+    "avgRespTime": 10568.446,
+    "avgWaitTime": 28.27539,
+    "avgNumInServ": 31.620514,
+    "avgTTFT": 75.31746,
+    "avgITL": 20.534498,
+    "maxRPS": 3.8208232
     }
     ```
 
 2. **\target**
 
-    Find the maximum arrival rate which yields at most the specified target performance values for the waiting time and the inter-token latency (ITL).
+    Find the maximum arrival rate which yields at most the specified target performance values for TTFT and ITL.
 
     ``` json
     {
+    "RPS": 3.0,
     "maxBatchSize": 48,
-    "avgNumTokens": 1024,
-    "alpha": 19,
-    "beta": 1,
-    "maxQueueSize": 200,
-    "targetWait": 1.0,
-    "targetITL": 50.0
+    "AvgInputTokens": 128,
+    "AvgOutputTokens": 512,
+    "alpha": 12,
+    "beta": 0.05,
+    "gamma": 0.0005,
+    "maxQueueSize": 128,
+    "targetTTFT": 60.0,
+    "targetITL": 20.0
     }
     ```
 
@@ -92,14 +99,15 @@ There are two operations:
 
     ``` json
     {
-    "throughput": 35.200314,
-    "avgRespTime": 51.532883,
-    "avgWaitTime": 0.33288673,
-    "avgNumInServ": 30.037598,
-    "avgTokenTime": 49.999996,
-    "maxRPM": 41.93564,
-    "RMPTargetWait": 36.61307,
-    "RPMTargetITL": 35.200314
+    "throughput": 2.8741095,
+    "avgRespTime": 10276.054,
+    "avgWaitTime": 10.09375,
+    "avgNumInServ": 29.505493,
+    "avgTTFT": 56.063286,
+    "avgITL": 19.99998,
+    "maxRPS": 3.8208232,
+    "RPSTargetTTFT": 2.910594,
+    "RPSTargetITL": 2.8741095
     }
     ```
 
@@ -163,11 +171,11 @@ curl -X POST http://localhost:8080/target -d @<problem-data-json-file>
 ``` json
 curl -X POST http://localhost:8080/solve \
   --header "Content-Type: application/json" \
-  --data '{"alpha": 8.0, "beta": 0.1, "maxBatchSize": 24, "maxQueueSize": 1000, "avgNumTokens": 1024, "RPM": 100}' | jq
+  --data '{"alpha": 8.0, "beta": 0.1, "maxBatchSize": 24, "maxQueueSize": 1000, "avgInputTokens": 256, "avgOutputTokens": 512, "RPS": 2.4}' | jq
 
 curl -X POST http://localhost:8080/target \
   --header "Content-Type: application/json" \
-  --data '{"alpha": 8.0, "beta": 0.1, "maxBatchSize": 24, "maxQueueSize": 1000, "avgNumTokens": 1024, "targetWait": 1, "targetITL": 10}' | jq
+  --data '{"alpha": 8.0, "beta": 0.1, "maxBatchSize": 24, "maxQueueSize": 1000, "avgInputTokens": 256, "avgOutputTokens": 512, "targetTTFT": 45, "targetITL": 12}' | jq
 ```
 
 ## Description

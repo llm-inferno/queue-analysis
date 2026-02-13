@@ -1,40 +1,37 @@
 package service
 
 import (
-	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/llm-inferno/queue-analysis/pkg/queue"
-	"github.com/llm-inferno/queue-analysis/pkg/utils"
+	"github.com/llm-inferno/queue-analysis/pkg/analyzer"
 )
-
-// parameters
-var delta float32 = 0.001 // small number
 
 // problem input data
 type ProblemData struct {
-	RPM          float32 `json:"RPM"`          // request arrival rate (requests/min)
-	MaxBatchSize int     `json:"maxBatchSize"` // maximum batch size
-	AvgNumTokens int     `json:"avgNumTokens"` // average number of tokens per request
-	Alpha        float32 `json:"alpha"`        // tau(n) = alpha + n * beta (msec)
-	Beta         float32 `json:"beta"`         // tau(n) = alpha + n * beta (msec)
-	MaxQueueSize int     `json:"maxQueueSize"` // maximum queue size
-	TargetWait   float32 `json:"targetWait"`   // target queueing time (sec)
-	TargetITL    float32 `json:"targetITL"`    // target inter-token interval (msec)
+	RPS             float32 `json:"RPS"`             // request arrival rate (requests/sec)
+	MaxBatchSize    int     `json:"maxBatchSize"`    // maximum batch size
+	AvgInputTokens  float32 `json:"avgInputTokens"`  // average number of input tokens per request
+	AvgOutputTokens float32 `json:"avgOutputTokens"` // average number of output tokens per request
+	Alpha           float32 `json:"alpha"`           // base iteration time (msec)
+	Beta            float32 `json:"beta"`            // slope for compute time (msec/token)
+	Gamma           float32 `json:"gamma"`           // slope for memory access time (msec/token*2)
+	MaxQueueSize    int     `json:"maxQueueSize"`    // maximum queue size
+	TargetTTFT      float32 `json:"targetTTFT"`      // target time to first token (msec)
+	TargetITL       float32 `json:"targetITL"`       // target inter-token interval (msec)
 }
 
 // analysis solution output data
 type AnalysisData struct {
-	Throughput    float32 `json:"throughput"`    // effective throughput (requests/min)
+	Throughput    float32 `json:"throughput"`    // effective throughput (requests/sec)
 	AvgRespTime   float32 `json:"avgRespTime"`   // average response time (sec)
 	AvgWaitTime   float32 `json:"avgWaitTime"`   // average queueing time (sec)
 	AvgNumInServ  float32 `json:"avgNumInServ"`  // average number of requests in system
-	AvgTokenTime  float32 `json:"avgTokenTime"`  // average token time (msec)
-	MaxRPM        float32 `json:"maxRPM"`        // maximum throughput (requests/min)
-	RMPTargetWait float32 `json:"RMPTargetWait"` // RPM for target queueing time (requests/min)
-	RPMTargetITL  float32 `json:"RPMTargetITL"`  // RPM for target ITL (requests/min)
+	AvgTTFT       float32 `json:"avgTTFT"`       // average time to first token (msec)
+	AvgITL        float32 `json:"avgITL"`        // average inter-token latency (msec)
+	MaxRPS        float32 `json:"maxRPS"`        // maximum throughput (requests/sec)
+	RPSTargetTTFT float32 `json:"RPSTargetTTFT"` // throughput to achieve target TTFT (requests/sec)
+	RPSTargetITL  float32 `json:"RPSTargetITL"`  // throughput to achieve target ITL (requests/sec)
 }
 
 // REST server for llm inference server analysis
@@ -59,42 +56,16 @@ func (analyzer *Analyzer) Run() {
 
 // check validity of input data
 func IsValid(pd *ProblemData) bool {
-	return pd.RPM >= 0 &&
+	return pd.RPS >= 0 &&
 		pd.MaxBatchSize > 0 &&
-		pd.AvgNumTokens > 0 &&
+		pd.AvgInputTokens >= 0 &&
+		pd.AvgOutputTokens >= 0 &&
 		pd.Alpha >= 0 &&
 		pd.Beta >= 0 &&
-		pd.Alpha+pd.Beta > 0 &&
+		pd.Gamma >= 0 &&
 		pd.MaxQueueSize >= 0 &&
-		pd.TargetWait >= 0 &&
+		pd.TargetTTFT >= 0 &&
 		pd.TargetITL >= 0
-}
-
-// analyze model given parameters
-func analyzeModel(model *queue.MM1ModelStateDependent, avgNumTokens int,
-	lambda, maxRPM, lambdaStarWait, lambdaStarService float32) *AnalysisData {
-
-	//solve model
-	model.Solve(lambda, 1)
-
-	// get statistics
-	tput := model.GetThroughput() * 1000 * 60
-	avgRespTime := model.GetAvgRespTime() / 1000
-	avgWaitTime := model.GetAvgWaitTime() / 1000
-	avgNumInServ := model.GetAvgNumInServers()
-	avgTokenTime := model.GetAvgServTime() / float32(avgNumTokens)
-
-	// return solution
-	return &AnalysisData{
-		Throughput:    tput,
-		AvgRespTime:   avgRespTime,
-		AvgWaitTime:   avgWaitTime,
-		AvgNumInServ:  avgNumInServ,
-		AvgTokenTime:  avgTokenTime,
-		MaxRPM:        maxRPM,
-		RMPTargetWait: lambdaStarWait * 1000 * 60,
-		RPMTargetITL:  lambdaStarService * 1000 * 60,
-	}
 }
 
 /*
@@ -109,33 +80,36 @@ func solve(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "binding error: " + err.Error()})
 		return
 	}
-	if !IsValid(&pd) || pd.RPM == 0 {
+	if !IsValid(&pd) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "data error: invalid input data"})
 		return
 	}
 
-	// calculate state-dependent service rate
-	servRate := make([]float32, pd.MaxBatchSize)
-	for n := 1; n <= pd.MaxBatchSize; n++ {
-		servRate[n-1] = float32(n) / (float32(pd.AvgNumTokens) * (pd.Alpha + pd.Beta*float32(n)))
-	}
-
-	// set and check limits
-	lambdaMax := servRate[pd.MaxBatchSize-1] * (1 - delta)
-	maxRPM := lambdaMax * 1000 * 60
-	if pd.RPM > maxRPM {
-		c.IndentedJSON(http.StatusBadRequest,
-			gin.H{"message": "limit error: " + fmt.Sprintf("RPM=%v greater than maxRPM=%v", pd.RPM, maxRPM)})
+	// create queue analyzer
+	queueAnalyzer := CreateQueueAnalyzer(&pd)
+	if queueAnalyzer == nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "NewLLMQueueAnalyzer() failed"})
 		return
 	}
-	occupancyUpperBound := pd.MaxQueueSize + pd.MaxBatchSize
 
-	// create and solve model
-	model := queue.NewMM1ModelStateDependent(occupancyUpperBound, servRate)
-	// request per msec
-	lambda := pd.RPM / 1000 / 60
-	sol := analyzeModel(model, pd.AvgNumTokens, lambda, maxRPM, 0, 0)
-	c.IndentedJSON(http.StatusOK, sol)
+	// analyze queue under a given load
+	metrics, err := queueAnalyzer.Analyze(pd.RPS)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Analyze() failed: " + err.Error()})
+		return
+	}
+
+	// return solution
+	analysisData := &AnalysisData{
+		Throughput:   metrics.Throughput,
+		AvgRespTime:  metrics.AvgRespTime,
+		AvgWaitTime:  metrics.AvgWaitTime,
+		AvgNumInServ: metrics.AvgNumInServ,
+		AvgTTFT:      metrics.AvgTTFT,
+		AvgITL:       metrics.AvgTokenTime,
+		MaxRPS:       metrics.MaxRate,
+	}
+	c.IndentedJSON(http.StatusOK, analysisData)
 }
 
 // find arrival rate to achieve target values
@@ -151,42 +125,58 @@ func target(c *gin.Context) {
 		return
 	}
 
-	// calculate state-dependent service rate
-	servRate := make([]float32, pd.MaxBatchSize)
-	for n := 1; n <= pd.MaxBatchSize; n++ {
-		servRate[n-1] = float32(n) / (float32(pd.AvgNumTokens) * (pd.Alpha + pd.Beta*float32(n)))
-	}
-
-	// set and check limits
-	lambdaMin := servRate[0] * delta
-	lambdaMax := servRate[pd.MaxBatchSize-1] * (1 - delta)
-	maxRPM := lambdaMax * 1000 * 60
-	occupancyUpperBound := pd.MaxQueueSize + pd.MaxBatchSize
-	targetServTime := pd.TargetITL * float32(pd.AvgNumTokens)
-	targetWaitTime := pd.TargetWait * 1000
-
-	// create model
-	model := queue.NewMM1ModelStateDependent(occupancyUpperBound, servRate)
-
-	// find max rate to achieve target service time
-	lambdaStarService, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetServTime, utils.EvalServTime(model))
-	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "service target analysis error: ind=" + strconv.Itoa(ind)})
+	// create queue analyzer
+	queueAnalyzer := CreateQueueAnalyzer(&pd)
+	if queueAnalyzer == nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "NewLLMQueueAnalyzer() failed"})
 		return
 	}
 
-	// find max rate to achieve target wait time
-	lambdaStarWait, ind, err := utils.BinarySearch(lambdaMin, lambdaMax, targetWaitTime, utils.EvalWaitingTime(model))
+	// size queue for given targets
+	targetPerf := &analyzer.TargetPerf{
+		TargetTTFT: pd.TargetTTFT,
+		TargetITL:  pd.TargetITL,
+		TargetTPS:  0, // not used in this service
+	}
+	targetRate, metrics, targetPerf, err := queueAnalyzer.Size(targetPerf)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "wait target analysis error: ind=" + strconv.Itoa(ind)})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Size() failed: " + err.Error()})
 		return
 	}
 
-	// analyze queue with smaller of two rates
-	lambda := lambdaStarService
-	if lambdaStarWait < lambdaStarService {
-		lambda = lambdaStarWait
+	// return solution
+	analysisData := &AnalysisData{
+		Throughput:    metrics.Throughput,
+		AvgRespTime:   metrics.AvgRespTime,
+		AvgWaitTime:   metrics.AvgWaitTime,
+		AvgNumInServ:  metrics.AvgNumInServ,
+		AvgTTFT:       metrics.AvgTTFT,
+		AvgITL:        metrics.AvgTokenTime,
+		MaxRPS:        metrics.MaxRate,
+		RPSTargetTTFT: targetRate.RateTargetTTFT,
+		RPSTargetITL:  targetRate.RateTargetITL,
 	}
-	sol := analyzeModel(model, pd.AvgNumTokens, lambda, maxRPM, lambdaStarWait, lambdaStarService)
-	c.IndentedJSON(http.StatusOK, sol)
+	c.IndentedJSON(http.StatusOK, analysisData)
+}
+
+// create queue analyzer from problem data
+func CreateQueueAnalyzer(pd *ProblemData) *analyzer.LLMQueueAnalyzer {
+	// create queue analyzer
+	config := &analyzer.Configuration{
+		MaxBatchSize: pd.MaxBatchSize,
+		MaxQueueSize: pd.MaxQueueSize,
+		ServiceParms: &analyzer.ServiceParms{
+			Alpha: pd.Alpha,
+			Beta:  pd.Beta,
+			Gamma: pd.Gamma,
+		},
+	}
+
+	requestSize := &analyzer.RequestSize{
+		AvgInputTokens:  pd.AvgInputTokens,
+		AvgOutputTokens: pd.AvgOutputTokens,
+	}
+
+	queueAnalyzer, _ := analyzer.NewLLMQueueAnalyzer(config, requestSize)
+	return queueAnalyzer
 }

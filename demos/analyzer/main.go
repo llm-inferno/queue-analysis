@@ -10,39 +10,33 @@ func main() {
 
 	// queue configuration
 	maxBatchSize := 256
-	maxQueueSize := 100
+	maxQueueSize := 0
 
 	// prefill and decode parameters
-	gamma := float32(86.615)
-	delta := float32(1.446e-03)
-	alpha := float32(6.958)
-	beta := float32(0.042)
+	alpha := float32(6.71134)
+	beta := float32(0.02417)
+	gamma := float32(0.04538 * 1e-3)
 
 	// request rate
-	requestRate := float32(25)
+	requestRate := float32(2.16)
 
 	// request size
-	avgInputTokens := 128
-	avgOutputTokens := 512
+	avgInputTokens := float32(4096)
+	avgOutputTokens := float32(1024)
 
 	// target values
-	targetTTFT := float32(120)
-	targetITL := float32(14)
-	targetTPS := float32(20 * 512)
+	targetTTFT := float32(140)
+	targetITL := float32(16.5)
+	targetTPS := float32(8 * 1024)
 
 	// create queue analyzer
 	config := &analyzer.Configuration{
 		MaxBatchSize: maxBatchSize,
 		MaxQueueSize: maxQueueSize,
 		ServiceParms: &analyzer.ServiceParms{
-			Prefill: &analyzer.PrefillParms{
-				Gamma: gamma,
-				Delta: delta,
-			},
-			Decode: &analyzer.DecodeParms{
-				Alpha: alpha,
-				Beta:  beta,
-			},
+			Alpha: alpha,
+			Beta:  beta,
+			Gamma: gamma,
 		},
 	}
 
