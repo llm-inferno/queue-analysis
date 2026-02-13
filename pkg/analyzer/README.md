@@ -33,15 +33,15 @@ Timing metrics are defined as follows:
 
 - AvgRespTime: average request response time (aka latency)
 - AvgWaitTime: average request queueing time
-- AvgPrefillTime: average request prefill time (processing input tokens and generating first output token)
-- AvgTokenTime: average token decode time (generating time of a subsequent output token)
-- TTFT: AvgWaitTime + AvgPrefillTime
+- AvgPrefillTime: average request prefill time (processing input tokens)
+- AvgTokenTime: average token decode time (generating time of an output token)
+- TTFT: AvgWaitTime + AvgPrefillTime + AvgTokenTime
 - ITL: AvgTokenTime
 
 Target metrics are defined as follows:
 
-- TTFT: max sum of queueing and prefill time (msec)
-- ITL: max decode time (msec)
+- TTFT: max average Time-To-First-Token (msec)
+- ITL: max average Inter-Token-Latency (msec)
 - TPS: min token generation rate (tokens/sec)
 
 Target values are positive, if zero then target not considered.
