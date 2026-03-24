@@ -281,6 +281,32 @@ func (p *ServiceParms) DecodeTime(r *RequestSize, batchSize float32) float32 {
 		p.Beta + p.Gamma*(r.AvgInputTokens+(r.AvgOutputTokens+1)/2)
 }
 
+// WPrefill returns the total prefill work W_0 for a request with input tokens n
+// split into nc chunks: W_0 = (beta + gamma*(nc+1)/2) * n.
+// The memory term grows with nc because later chunks re-read earlier KV vectors.
+func (p *ServiceParms) WPrefill(n float32, nc int) float32 {
+	return (p.Beta + p.Gamma*float32(nc+1)/2) * n
+}
+
+// WDecode returns the total decode work W_dec over all m output tokens:
+// W_dec = beta*m + gamma*m*(n + (m+1)/2).
+func (p *ServiceParms) WDecode(n, m float32) float32 {
+	return p.Beta*m + p.Gamma*m*(n+(m+1)/2)
+}
+
+// WTotal returns the total work W_total over a request's lifetime:
+// W_total = WPrefill(n, nc) + WDecode(n, m).
+func (p *ServiceParms) WTotal(n, m float32, nc int) float32 {
+	return p.WPrefill(n, nc) + p.WDecode(n, m)
+}
+
+// Delta returns the average work contributed by one request per iteration:
+// delta = W_total / (nc + m).
+// This is the marginal cost of one active request on the iteration time.
+func (p *ServiceParms) Delta(n, m float32, nc int) float32 {
+	return p.WTotal(n, m, nc) / (float32(nc) + m)
+}
+
 // Function used in binary search (target TTFT)
 //   - x is lambda req/msec
 func EvalTTFT(data *EvalFuncData) func(x float32) (float32, error) {
