@@ -275,10 +275,10 @@ func (p *ServiceParms) PrefillTime(r *RequestSize, batchSize float32) float32 {
 	return p.IterationTime(r, batchSize) + (p.Beta+p.Gamma)*r.AvgInputTokens
 }
 
-// Average decode time (generation of ne token) as a function of the batch size
+// Average decode time (generation of one token) as a function of the batch size
 func (p *ServiceParms) DecodeTime(r *RequestSize, batchSize float32) float32 {
 	return p.IterationTime(r, batchSize) +
-		p.Beta + p.Gamma*(r.AvgInputTokens+r.AvgOutputTokens/2)
+		p.Beta + p.Gamma*(r.AvgInputTokens+(r.AvgOutputTokens+1)/2)
 }
 
 // Function used in binary search (target TTFT)
