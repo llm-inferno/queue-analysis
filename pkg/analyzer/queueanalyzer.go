@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/llm-inferno/queue-analysis/pkg/queue"
 	"github.com/llm-inferno/queue-analysis/pkg/utils"
@@ -168,9 +169,12 @@ func (qa *LLMQueueAnalyzer) Analyze(requestRate float32) (metrics *AnalysisMetri
 
 	// get statistics
 	avgNumInServ := model.GetAvgNumInServers()
-	avgPrefillTime := qa.ServiceParms.PrefillTime(qa.RequestSize, avgNumInServ)
-	avgDecodeTime := (model.GetAvgServTime() - avgPrefillTime) / qa.RequestSize.AvgOutputTokens
-	avgTTFT := model.GetAvgWaitTime() + avgPrefillTime + avgDecodeTime
+	nc := NumChunks(int(math.Round(float64(avgNumInServ))), qa.MaxNumTokens,
+		qa.RequestSize.AvgInputTokens, qa.RequestSize.AvgOutputTokens)
+	avgPrefillTime := qa.ServiceParms.PrefillTime(qa.RequestSize, avgNumInServ, nc)
+	avgDecodeTime := qa.ServiceParms.DecodeTime(qa.RequestSize, avgNumInServ, nc)
+	// TTFT = wait time + prefill time (prefill generates the first token; no extra decode step)
+	avgTTFT := model.GetAvgWaitTime() + avgPrefillTime
 
 	rho := avgNumInServ / float32(qa.MaxBatchSize)
 	rho = min(max(rho, 0), 1)
@@ -196,6 +200,7 @@ type EvalFuncData struct {
 	requestSize  *RequestSize                  // number of input and output tokens per request
 	serviceParms *ServiceParms                 // request processing parameters for prefill and decode stages
 	maxBatchSize int                           // max batch size
+	maxNumTokens int                           // max number of tokens per batch (token budget M)
 }
 
 // evaluate max request rates to achieve a given target performance, returns
@@ -224,6 +229,7 @@ func (qa *LLMQueueAnalyzer) Size(targetPerf *TargetPerf) (targetRate *TargetRate
 			requestSize:  qa.RequestSize,
 			serviceParms: qa.ServiceParms,
 			maxBatchSize: qa.MaxBatchSize,
+			maxNumTokens: qa.MaxNumTokens,
 		})
 		lambdaStarTTFT, ind, err = utils.BinarySearch(lambdaMin, lambdaMax, targetTTFT, evalTTF)
 		if ind < 0 {
@@ -243,6 +249,7 @@ func (qa *LLMQueueAnalyzer) Size(targetPerf *TargetPerf) (targetRate *TargetRate
 			requestSize:  qa.RequestSize,
 			serviceParms: qa.ServiceParms,
 			maxBatchSize: qa.MaxBatchSize,
+			maxNumTokens: qa.MaxNumTokens,
 		})
 		lambdaStarITL, ind, err = utils.BinarySearch(lambdaMin, lambdaMax, targetITL, evalITL)
 		if ind < 0 {
@@ -281,25 +288,23 @@ func (qa *LLMQueueAnalyzer) Size(targetPerf *TargetPerf) (targetRate *TargetRate
 	return targetRate, metrics, achieved, nil
 }
 
-// Average iteration time as a function of the batch size T(n)
-func (p *ServiceParms) IterationTime(r *RequestSize, batchSize float32) float32 {
-	tokensCompute := (r.AvgInputTokens + r.AvgOutputTokens) / (r.AvgOutputTokens + 1)
-	tokensMemory := r.AvgInputTokens + r.AvgOutputTokens/2
-	return p.Alpha + batchSize*(p.Beta*tokensCompute+p.Gamma*tokensMemory)
+// Average iteration time T_iter(N) = alpha + N*delta(nc)
+func (p *ServiceParms) IterationTime(r *RequestSize, batchSize float32, nc int) float32 {
+	return p.Alpha + batchSize*p.Delta(r.AvgInputTokens, r.AvgOutputTokens, nc)
 }
 
-// Average prefill time as a function of the batch size
-func (p *ServiceParms) PrefillTime(r *RequestSize, batchSize float32) float32 {
+// Average prefill time = T_iter(N) + WPrefill(n, nc)
+func (p *ServiceParms) PrefillTime(r *RequestSize, batchSize float32, nc int) float32 {
 	if r.AvgInputTokens == 0 {
 		return 0
 	}
-	return p.IterationTime(r, batchSize) + (p.Beta+p.Gamma)*r.AvgInputTokens
+	return p.IterationTime(r, batchSize, nc) + p.WPrefill(r.AvgInputTokens, nc)
 }
 
-// Average decode time (generation of one token) as a function of the batch size
-func (p *ServiceParms) DecodeTime(r *RequestSize, batchSize float32) float32 {
-	return p.IterationTime(r, batchSize) +
-		p.Beta + p.Gamma*(r.AvgInputTokens+(r.AvgOutputTokens+1)/2)
+// Average ITL (inter-token latency) = T_iter(N) + WDecode(n,m)/m
+func (p *ServiceParms) DecodeTime(r *RequestSize, batchSize float32, nc int) float32 {
+	return p.IterationTime(r, batchSize, nc) +
+		p.WDecode(r.AvgInputTokens, r.AvgOutputTokens)/r.AvgOutputTokens
 }
 
 // WPrefill returns the total prefill work W_0 for a request with input tokens n
@@ -336,9 +341,11 @@ func EvalTTFT(data *EvalFuncData) func(x float32) (float32, error) {
 		if !data.model.IsValid() {
 			return 0, fmt.Errorf("invalid model %s", data.model)
 		}
-		avgPrefillTime := data.serviceParms.PrefillTime(data.requestSize, data.model.GetAvgNumInServers())
-		avgDecodeTime := (data.model.GetAvgServTime() - avgPrefillTime) / data.requestSize.AvgOutputTokens
-		ttft := data.model.GetAvgWaitTime() + avgPrefillTime + avgDecodeTime
+		avgN := data.model.GetAvgNumInServers()
+		nc := NumChunks(int(math.Round(float64(avgN))), data.maxNumTokens,
+			data.requestSize.AvgInputTokens, data.requestSize.AvgOutputTokens)
+		prefillTime := data.serviceParms.PrefillTime(data.requestSize, avgN, nc)
+		ttft := data.model.GetAvgWaitTime() + prefillTime
 		return ttft, nil
 	}
 }
@@ -351,8 +358,10 @@ func EvalITL(data *EvalFuncData) func(x float32) (float32, error) {
 		if !data.model.IsValid() {
 			return 0, fmt.Errorf("invalid model %s", data.model)
 		}
-		avgPrefillTime := data.serviceParms.PrefillTime(data.requestSize, data.model.GetAvgNumInServers())
-		avgDecodeTime := (data.model.GetAvgServTime() - avgPrefillTime) / data.requestSize.AvgOutputTokens
-		return avgDecodeTime, nil
+		avgN := data.model.GetAvgNumInServers()
+		nc := NumChunks(int(math.Round(float64(avgN))), data.maxNumTokens,
+			data.requestSize.AvgInputTokens, data.requestSize.AvgOutputTokens)
+		itl := data.serviceParms.DecodeTime(data.requestSize, avgN, nc)
+		return itl, nil
 	}
 }
