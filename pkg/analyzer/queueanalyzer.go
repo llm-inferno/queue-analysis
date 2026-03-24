@@ -97,13 +97,34 @@ func NewLLMQueueAnalyzer(qConfig *Configuration, requestSize *RequestSize) (*LLM
 // build queueing model using service rates, leaving arrival rate as parameter
 func BuildModel(c *Configuration, r *RequestSize) (modelData *LLMQueueAnalyzer) {
 	parms := c.ServiceParms
+	n, m := r.AvgInputTokens, r.AvgOutputTokens
 
-	// calculate state-dependent service rate
+	// Calculate the state-dependent service rate mu(N) for each batch size N.
+	//
+	// When N requests are concurrently in the batch, each iteration takes:
+	//   T_iter(N) = alpha + N * delta(nc(N))
+	// where nc(N) = NumChunks(N, M, n, m) is the number of prefill chunks for
+	// a request admitted at batch size N (a steady-state approximation: nc is
+	// fixed at admission and treated as a function of the current state N).
+	//
+	// A request goes through nc+m iterations to complete service. During each
+	// of those iterations, its own work contribution delta slows the iteration
+	// by delta, so the effective per-iteration time experienced by the request
+	// is T_iter(N) + delta = T_iter(N+1). Therefore:
+	//
+	//   totalServTime(N) = (nc+m) * T_iter(N+1)
+	//                    = (nc+m) * T_iter(N) + (nc+m)*delta
+	//                    = (nc+m) * T_iter(N) + W_tot(nc)
+	//
+	//   mu(N) = N / totalServTime(N)
 	servRate := make([]float32, c.MaxBatchSize)
-	for n := 1; n <= c.MaxBatchSize; n++ {
-		prefillTime := parms.PrefillTime(r, float32(n))
-		decodeTime := r.AvgOutputTokens * parms.DecodeTime(r, float32(n))
-		servRate[n-1] = float32(n) / (prefillTime + decodeTime)
+	for N := 1; N <= c.MaxBatchSize; N++ {
+		nc := NumChunks(N, c.MaxNumTokens, n, m)
+		delta := parms.Delta(n, m, nc)
+		tIter := parms.Alpha + float32(N)*delta
+		wTot := parms.WTotal(n, m, nc)
+		totalServTime := (float32(nc)+m)*tIter + wTot
+		servRate[N-1] = float32(N) / totalServTime
 	}
 
 	// set and check limits
