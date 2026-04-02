@@ -133,9 +133,10 @@ func (qa *LLMQueueAnalyzer) Analyze(requestRate float32) (metrics *AnalysisMetri
 		return nil, fmt.Errorf("invalid request rate %v", requestRate)
 	}
 	model := qa.Model
-	rateRange := qa.RateRange
 
-	//solve model
+	// No upper-bound guard: the finite-K birth-death model handles any arrival rate.
+	// Excess load increases blocking probability p[K]; throughput saturates naturally.
+	// Callers can detect overload via: metrics.OfferedRate > metrics.Throughput
 	model.Solve(requestRate/1000, 1)
 	if !model.IsValid() {
 		err = fmt.Errorf("invalid model %s", model)
@@ -161,7 +162,7 @@ func (qa *LLMQueueAnalyzer) Analyze(requestRate float32) (metrics *AnalysisMetri
 		AvgPrefillTime: avgPrefillTime,
 		AvgTokenTime:   avgDecodeTime,
 		AvgTTFT:        avgTTFT,
-		MaxRate:        rateRange.Max,
+		MaxRate:        qa.RateRange.Max,
 		Rho:            rho,
 	}
 	return metrics, nil
