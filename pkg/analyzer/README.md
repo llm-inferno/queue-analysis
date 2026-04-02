@@ -29,6 +29,12 @@ Units of performance metrics:
 - rate: requests/sec, except internal to the queueing model (lambda)
 - time: msec
 
+Rate metrics are defined as follows:
+
+- OfferedRate: offered arrival rate (requests/sec); equals Throughput when not overloaded
+- Throughput: effective departure rate / goodput (requests/sec)
+- MaxRate: maximum stable throughput of the server (requests/sec)
+
 Timing metrics are defined as follows:
 
 - AvgRespTime: average request response time (aka latency)
@@ -45,3 +51,17 @@ Target metrics are defined as follows:
 - TPS: min token generation rate (tokens/sec)
 
 Target values are positive, if zero then target not considered.
+
+## Overload behavior
+
+When the offered arrival rate exceeds the server capacity (`RateRange.Max`),
+`Analyze()` still returns valid metrics rather than an error. The finite
+queue naturally absorbs excess load: requests are dropped when the queue
+is full, and throughput saturates at the server capacity.
+
+- `OfferedRate`: the arrival rate passed to `Analyze()` (requests/sec)
+- `Throughput`: the accepted / departure rate (requests/sec); always ≤ `OfferedRate`
+- Dropped traffic = `OfferedRate − Throughput`
+- `Rho` approaches 1 as the server saturates
+
+`Analyze()` returns an error only for invalid input (`requestRate ≤ 0`).
