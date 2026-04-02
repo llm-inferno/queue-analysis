@@ -23,6 +23,7 @@ type ProblemData struct {
 
 // analysis solution output data
 type AnalysisData struct {
+	OfferedRPS    float32 `json:"offeredRPS"`    // offered arrival rate (requests/sec)
 	Throughput    float32 `json:"throughput"`    // effective throughput (requests/sec)
 	AvgRespTime   float32 `json:"avgRespTime"`   // average response time (sec)
 	AvgWaitTime   float32 `json:"avgWaitTime"`   // average queueing time (sec)
@@ -101,6 +102,7 @@ func solve(c *gin.Context) {
 
 	// return solution
 	analysisData := &AnalysisData{
+		OfferedRPS:   metrics.OfferedRate,
 		Throughput:   metrics.Throughput,
 		AvgRespTime:  metrics.AvgRespTime,
 		AvgWaitTime:  metrics.AvgWaitTime,
@@ -146,6 +148,7 @@ func target(c *gin.Context) {
 
 	// return solution
 	analysisData := &AnalysisData{
+		OfferedRPS:    metrics.OfferedRate,
 		Throughput:    metrics.Throughput,
 		AvgRespTime:   metrics.AvgRespTime,
 		AvgWaitTime:   metrics.AvgWaitTime,
