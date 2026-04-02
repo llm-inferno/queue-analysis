@@ -57,7 +57,8 @@ type RateRange struct {
 
 // analysis solution metrics data
 type AnalysisMetrics struct {
-	Throughput     float32 // effective throughput (requests/sec)
+	OfferedRate    float32 // offered arrival rate (requests/sec); equals Throughput when not overloaded
+	Throughput     float32 // effective throughput / goodput (requests/sec)
 	AvgRespTime    float32 // average request response time (aka latency) (msec)
 	AvgWaitTime    float32 // average request queueing time (msec)
 	AvgNumInServ   float32 // average number of requests in service
@@ -133,10 +134,6 @@ func (qa *LLMQueueAnalyzer) Analyze(requestRate float32) (metrics *AnalysisMetri
 	}
 	model := qa.Model
 	rateRange := qa.RateRange
-	if requestRate > rateRange.Max {
-		err = fmt.Errorf("rate=%v, max allowed rate=%v", requestRate, rateRange.Max)
-		return nil, err
-	}
 
 	//solve model
 	model.Solve(requestRate/1000, 1)
@@ -156,6 +153,7 @@ func (qa *LLMQueueAnalyzer) Analyze(requestRate float32) (metrics *AnalysisMetri
 
 	// return solution
 	metrics = &AnalysisMetrics{
+		OfferedRate:    requestRate,
 		Throughput:     model.GetThroughput() * 1000,
 		AvgRespTime:    model.GetAvgRespTime(),
 		AvgWaitTime:    model.GetAvgWaitTime(),
