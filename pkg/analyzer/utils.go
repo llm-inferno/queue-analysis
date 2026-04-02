@@ -46,6 +46,21 @@ func NumIterationsPerPrefill(cfg *Configuration, req *RequestSize) []int {
 	return numIters
 }
 
+// NumChunks returns the number of prefill chunks nc for a request given
+// batch size N, token budget M, input tokens n, and output tokens m.
+// Solves the token budget constraint at equality for nc:
+//
+//	M*nc^2 + Phi*nc - n*m = 0,  where Phi = m*(M-N) - n*(N+1)
+//
+// The unique positive root is nc* = (-Phi + sqrt(Phi^2 + 4*M*n*m)) / (2*M),
+// and nc = ceil(nc*). The result is always >= 1.
+func NumChunks(N, M int, n, m float32) int {
+	phi := m*float32(M-N) - n*float32(N+1)
+	disc := phi*phi + 4*float32(M)*n*m
+	nc := (-phi + float32(math.Sqrt(float64(disc)))) / (2 * float32(M))
+	return max(1, int(math.Ceil(float64(nc))))
+}
+
 // check validity of configuration parameters
 func (c *Configuration) check() error {
 	if c.MaxBatchSize <= 0 || c.MaxQueueSize < 0 || c.MaxNumTokens < 0 ||
