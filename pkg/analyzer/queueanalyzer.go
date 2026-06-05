@@ -25,6 +25,7 @@ type LLMQueueAnalyzer struct {
 	RequestSize  *RequestSize                  // number of input and output tokens per request
 	Model        *queue.MM1ModelStateDependent // queueing model
 	RateRange    *RateRange                    // range of request rates for model stability
+	NumChunks    []int                         // NumChunks[B] = number of prefill chunks at batch size B
 }
 
 // queue configuration parameters
@@ -95,16 +96,24 @@ func NewLLMQueueAnalyzer(qConfig *Configuration, requestSize *RequestSize) (*LLM
 	return BuildModel(qConfig, requestSize), nil
 }
 
-// build queueing model using service rates, leaving arrival rate as parameter
+// build queueing model using service rates, leaving arrival rate as parameter.
+//
+// Limited (chunked-prefill) case + new analysis. For each batch size B,
+// the per-request service time is tau(B) = (c+m)*T_iter(B) where c=c(B) is
+// the number of prefill chunks and T_iter(B) = alpha + B*delta. The OLD
+// analysis had tau(B) = prefill_old(B) + m*decode_old(B) which expands to
+// (c+m)*(alpha + (B+1)*delta), double-counting the focal request's own work;
+// removing that double count is the defining change of the new analysis.
 func BuildModel(c *Configuration, r *RequestSize) (modelData *LLMQueueAnalyzer) {
 	parms := c.ServiceParms
 
-	// calculate state-dependent service rate
+	numChunks := NumIterationsPerPrefill(c, r)
+
 	servRate := make([]float32, c.MaxBatchSize)
-	for n := 1; n <= c.MaxBatchSize; n++ {
-		prefillTime := parms.PrefillTime(r, float32(n))
-		decodeTime := r.AvgOutputTokens * parms.DecodeTime(r, float32(n))
-		servRate[n-1] = float32(n) / (prefillTime + decodeTime)
+	for B := 1; B <= c.MaxBatchSize; B++ {
+		nc := numChunks[B]
+		tau := tauNew(parms, r, B, nc)
+		servRate[B-1] = float32(B) / tau
 	}
 
 	// set and check limits
@@ -124,6 +133,7 @@ func BuildModel(c *Configuration, r *RequestSize) (modelData *LLMQueueAnalyzer) 
 		RequestSize:  r,
 		Model:        model,
 		RateRange:    rateRange,
+		NumChunks:    numChunks,
 	}
 }
 
@@ -143,9 +153,10 @@ func (qa *LLMQueueAnalyzer) Analyze(requestRate float32) (metrics *AnalysisMetri
 		return nil, err
 	}
 
-	// get statistics
+	// mean-field at the in-service mean batch size X
 	avgNumInServ := model.GetAvgNumInServers()
-	avgPrefillTime := qa.ServiceParms.PrefillTime(qa.RequestSize, avgNumInServ)
+	nc := qa.numChunksAt(avgNumInServ)
+	avgPrefillTime := prefillNew(qa.ServiceParms, qa.RequestSize, avgNumInServ, nc)
 	avgDecodeTime := (model.GetAvgServTime() - avgPrefillTime) / qa.RequestSize.AvgOutputTokens
 	avgTTFT := model.GetAvgWaitTime() + avgPrefillTime + avgDecodeTime
 
@@ -168,18 +179,22 @@ func (qa *LLMQueueAnalyzer) Analyze(requestRate float32) (metrics *AnalysisMetri
 	return metrics, nil
 }
 
+// numChunksAt returns the number of prefill chunks for a (possibly fractional)
+// batch size, reading it off the precomputed table at the rounded index.
+func (qa *LLMQueueAnalyzer) numChunksAt(batchSize float32) int {
+	return numChunksAtFromTable(qa.NumChunks, batchSize, qa.MaxBatchSize)
+}
+
 // model and parameters used in functional evaluation
 type EvalFuncData struct {
 	model        *queue.MM1ModelStateDependent // queueing model
 	requestSize  *RequestSize                  // number of input and output tokens per request
 	serviceParms *ServiceParms                 // request processing parameters for prefill and decode stages
 	maxBatchSize int                           // max batch size
+	numChunks    []int                         // NumChunks[B] for B = 1..maxBatchSize
 }
 
-// evaluate max request rates to achieve a given target performance, returns
-//   - max request rates
-//   - performance metrics at min of max request rates
-//   - achieved values of targets
+// evaluate max request rates to achieve a given target performance
 func (qa *LLMQueueAnalyzer) Size(targetPerf *TargetPerf) (targetRate *TargetRate, metrics *AnalysisMetrics, achieved *TargetPerf, err error) {
 	if err := targetPerf.check(); err != nil {
 		return nil, nil, nil, err
@@ -191,10 +206,8 @@ func (qa *LLMQueueAnalyzer) Size(targetPerf *TargetPerf) (targetRate *TargetRate
 	lambdaMin := qa.RateRange.Min / 1000
 	lambdaMax := qa.RateRange.Max / 1000
 
-	// indicator value returned by binary search
 	var ind int
 
-	// find max rate to achieve target TTFT time
 	lambdaStarTTFT := lambdaMax
 	if targetTTFT > 0 {
 		evalTTF := EvalTTFT(&EvalFuncData{
@@ -202,6 +215,7 @@ func (qa *LLMQueueAnalyzer) Size(targetPerf *TargetPerf) (targetRate *TargetRate
 			requestSize:  qa.RequestSize,
 			serviceParms: qa.ServiceParms,
 			maxBatchSize: qa.MaxBatchSize,
+			numChunks:    qa.NumChunks,
 		})
 		lambdaStarTTFT, ind, err = utils.BinarySearch(lambdaMin, lambdaMax, targetTTFT, evalTTF)
 		if ind < 0 {
@@ -213,7 +227,6 @@ func (qa *LLMQueueAnalyzer) Size(targetPerf *TargetPerf) (targetRate *TargetRate
 		}
 	}
 
-	// find max rate to achieve target ITL time
 	lambdaStarITL := lambdaMax
 	if targetITL > 0 {
 		evalITL := EvalITL(&EvalFuncData{
@@ -221,6 +234,7 @@ func (qa *LLMQueueAnalyzer) Size(targetPerf *TargetPerf) (targetRate *TargetRate
 			requestSize:  qa.RequestSize,
 			serviceParms: qa.ServiceParms,
 			maxBatchSize: qa.MaxBatchSize,
+			numChunks:    qa.NumChunks,
 		})
 		lambdaStarITL, ind, err = utils.BinarySearch(lambdaMin, lambdaMax, targetITL, evalITL)
 		if ind < 0 {
@@ -232,15 +246,13 @@ func (qa *LLMQueueAnalyzer) Size(targetPerf *TargetPerf) (targetRate *TargetRate
 		}
 	}
 
-	// find max rate to achieve target TPS
 	lambdaStarTPS := lambdaMax
 	if targetTPS > 0 {
 		lambdaStarTPS = lambdaMax * (1 - StabilitySafetyFraction)
 	}
 
-	// analyze queue with smaller of rates
 	lambda := min(lambdaStarTTFT, lambdaStarITL, lambdaStarTPS)
-	requestRate := lambda * 1000 // convert to per-second rate
+	requestRate := lambda * 1000
 	if metrics, err = qa.Analyze(requestRate); err != nil {
 		return nil, nil, nil, err
 	}
@@ -259,25 +271,82 @@ func (qa *LLMQueueAnalyzer) Size(targetPerf *TargetPerf) (targetRate *TargetRate
 	return targetRate, metrics, achieved, nil
 }
 
-// Average iteration time as a function of the batch size T(n)
-func (p *ServiceParms) IterationTime(r *RequestSize, batchSize float32) float32 {
-	tokensCompute := (r.AvgInputTokens + r.AvgOutputTokens) / (r.AvgOutputTokens + 1)
-	tokensMemory := r.AvgInputTokens + r.AvgOutputTokens/2
-	return p.Alpha + batchSize*(p.Beta*tokensCompute+p.Gamma*tokensMemory)
+// ---------------------------------------------------------------------------
+// New-analysis primitives. The work decomposition (w_prefill, w_decode, delta)
+// is unchanged from the per-iteration work model. The state-dependent service
+// time, prefill latency, and per-token decode latency follow the new analysis:
+//
+//   prefill(B) = c * (alpha + (B-1)*delta) + w_prefill
+//   itl(B)     = alpha + (B-1)*delta + beta + gamma*(n + (m+1)/2)
+//   tau(B)     = (c+m) * (alpha + B*delta)
+//
+// alpha + (B-1)*delta is the "background" iteration time (overhead plus the
+// c-1 co-resident requests, with the focal request's own contribution
+// removed); the focal request's own work is charged explicitly via w_prefill
+// and the marginal decode term.
+// ---------------------------------------------------------------------------
+
+func wPrefill(p *ServiceParms, r *RequestSize, nc int) float32 {
+	return (p.Beta + p.Gamma*float32(nc+1)/2) * r.AvgInputTokens
 }
 
-// Average prefill time as a function of the batch size
+func wDecode(p *ServiceParms, r *RequestSize) float32 {
+	return p.Beta*r.AvgOutputTokens + p.Gamma*r.AvgOutputTokens*(r.AvgInputTokens+(r.AvgOutputTokens+1)/2)
+}
+
+func wTotal(p *ServiceParms, r *RequestSize, nc int) float32 {
+	return wPrefill(p, r, nc) + wDecode(p, r)
+}
+
+func delta(p *ServiceParms, r *RequestSize, nc int) float32 {
+	return wTotal(p, r, nc) / (float32(nc) + r.AvgOutputTokens)
+}
+
+func tIter(p *ServiceParms, r *RequestSize, batchSize float32, nc int) float32 {
+	return p.Alpha + batchSize*delta(p, r, nc)
+}
+
+func tauNew(p *ServiceParms, r *RequestSize, batchSize int, nc int) float32 {
+	return (float32(nc) + r.AvgOutputTokens) * tIter(p, r, float32(batchSize), nc)
+}
+
+func prefillNew(p *ServiceParms, r *RequestSize, batchSize float32, nc int) float32 {
+	bg := p.Alpha + (batchSize-1)*delta(p, r, nc)
+	if bg < 0 {
+		bg = 0
+	}
+	return float32(nc)*bg + wPrefill(p, r, nc)
+}
+
+func itlNew(p *ServiceParms, r *RequestSize, batchSize float32, nc int) float32 {
+	bg := p.Alpha + (batchSize-1)*delta(p, r, nc)
+	if bg < 0 {
+		bg = 0
+	}
+	return bg + p.Beta + p.Gamma*(r.AvgInputTokens+(r.AvgOutputTokens+1)/2)
+}
+
+// ---------------------------------------------------------------------------
+// Backwards-compat shims. Out-of-tree callers may use ServiceParms.IterationTime
+// / PrefillTime / DecodeTime directly; those keep working but degenerate to the
+// unlimited (c=1) case because the chunked formulas need a numChunks input
+// that the bare-method signature cannot supply. New code should call the
+// analyzer-level helpers above.
+// ---------------------------------------------------------------------------
+
+func (p *ServiceParms) IterationTime(r *RequestSize, batchSize float32) float32 {
+	return tIter(p, r, batchSize, 1)
+}
+
 func (p *ServiceParms) PrefillTime(r *RequestSize, batchSize float32) float32 {
 	if r.AvgInputTokens == 0 {
 		return 0
 	}
-	return p.IterationTime(r, batchSize) + (p.Beta+p.Gamma)*r.AvgInputTokens
+	return prefillNew(p, r, batchSize, 1)
 }
 
-// Average decode time (generation of one token) as a function of the batch size
 func (p *ServiceParms) DecodeTime(r *RequestSize, batchSize float32) float32 {
-	return p.IterationTime(r, batchSize) +
-		p.Beta + p.Gamma*(r.AvgInputTokens+(r.AvgOutputTokens+1)/2)
+	return itlNew(p, r, batchSize, 1)
 }
 
 // Function used in binary search (target TTFT)
@@ -288,7 +357,9 @@ func EvalTTFT(data *EvalFuncData) func(x float32) (float32, error) {
 		if !data.model.IsValid() {
 			return 0, fmt.Errorf("invalid model %s", data.model)
 		}
-		avgPrefillTime := data.serviceParms.PrefillTime(data.requestSize, data.model.GetAvgNumInServers())
+		B := data.model.GetAvgNumInServers()
+		nc := numChunksAtFromTable(data.numChunks, B, data.maxBatchSize)
+		avgPrefillTime := prefillNew(data.serviceParms, data.requestSize, B, nc)
 		avgDecodeTime := (data.model.GetAvgServTime() - avgPrefillTime) / data.requestSize.AvgOutputTokens
 		ttft := data.model.GetAvgWaitTime() + avgPrefillTime + avgDecodeTime
 		return ttft, nil
@@ -303,8 +374,21 @@ func EvalITL(data *EvalFuncData) func(x float32) (float32, error) {
 		if !data.model.IsValid() {
 			return 0, fmt.Errorf("invalid model %s", data.model)
 		}
-		avgPrefillTime := data.serviceParms.PrefillTime(data.requestSize, data.model.GetAvgNumInServers())
+		B := data.model.GetAvgNumInServers()
+		nc := numChunksAtFromTable(data.numChunks, B, data.maxBatchSize)
+		avgPrefillTime := prefillNew(data.serviceParms, data.requestSize, B, nc)
 		avgDecodeTime := (data.model.GetAvgServTime() - avgPrefillTime) / data.requestSize.AvgOutputTokens
 		return avgDecodeTime, nil
 	}
+}
+
+func numChunksAtFromTable(table []int, batchSize float32, maxBatchSize int) int {
+	idx := int(batchSize + 0.5)
+	if idx < 1 {
+		idx = 1
+	}
+	if idx > maxBatchSize {
+		idx = maxBatchSize
+	}
+	return table[idx]
 }
