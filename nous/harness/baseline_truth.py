@@ -12,8 +12,6 @@ import argparse
 import json
 from pathlib import Path
 
-import requests
-
 from nous.harness.oracle import make_oracle
 from nous.harness.scenarios import load_campaign
 from nous.harness.server import AnalyzerServer
@@ -43,7 +41,7 @@ def main() -> None:
                 base_url, s, alpha=config.alpha, beta=config.beta, gamma=config.gamma,
             )
             curve = []
-            best_m, best_t = m_min, -1.0
+            best_m, best_t = m_min, 0.0  # 0 matches the oracle's infeasibility convention
             for m in range(m_min, m_max + 1):
                 out = eval_(m)
                 t = float(out["throughput"])
