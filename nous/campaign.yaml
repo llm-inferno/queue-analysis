@@ -1,0 +1,44 @@
+research_question: >
+  Find structural properties of f(M) = max-RPS-meeting-targets as a function of
+  MaxBatchSize M, then design an algorithm that finds argmax_M f with few /target
+  calls. Treat /target as the black-box oracle. Score on two axes: (a) number of
+  /target calls, (b) gap_throughput_rel = (truth - chosen) / truth. Pareto compare.
+
+  Stage plan: iter 1-3 discover properties (unimodality, local concavity / plateau,
+  closed-form predictor for M* from inputs); iter 4-5 propose and compare algorithms
+  in nous/harness/strategies/. Use the harness in nous/harness/run.py — strategies
+  must implement search(target_eval, m_min, m_max) -> int; the harness counts calls.
+
+  For the full brief — scenarios, harness contract, Pareto axes, scoring rules,
+  stage-by-stage iteration plan — read nous/description.txt in this repository.
+
+run_id: queue-throughput
+
+max_iterations: 5
+
+target_system:
+  name: "queue-analysis"
+  description: >
+    Go REST server (main.go) that solves a state-dependent Markovian queueing model
+    of a vLLM inference server. Two endpoints on :8080:
+      - /solve  : analyze the queue at a given (RPS, MaxBatchSize, ...) and return
+                  Throughput, AvgITL, AvgTTFT, etc.
+      - /target : find the maximum RPS that satisfies AvgITL <= TargetITL and
+                  AvgTTFT <= TargetTTFT for a given MaxBatchSize, returning that
+                  RPS as Throughput.
+    See examples/problem-data.json (input) and examples/solution-target.json
+    (output) for the schemas.
+  observable_metrics:
+    - throughput
+    - avgITL
+    - avgTTFT
+    - calls_to_target_per_search
+    - gap_throughput_rel
+  controllable_knobs:
+    - MaxBatchSize
+    - search_strategy_in_nous_harness_strategies
+  repo_path: /Users/tantawi/Projects/llm-inferno/queue-analysis
+
+prompts:
+  methodology_layer: "prompts/methodology"
+  domain_adapter_layer: null
