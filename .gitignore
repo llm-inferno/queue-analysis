@@ -18,3 +18,9 @@ vendor/
 .DS_Store
 ~*
 CLAUDE.md
+
+# nous campaign artifacts
+nous/cache/
+nous/results/
+nous/.venv/
+.nous/
