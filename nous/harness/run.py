@@ -63,9 +63,19 @@ def run_strategy_on_scenario(
     beta: float = 0.05,
     gamma: float = 0.0005,
 ) -> ScenarioResult:
+    """Run one strategy against one scenario; return a scored ScenarioResult.
+
+    Note: this harness always makes one extra confirmatory eval_(m_chosen) call
+    after the strategy returns, so the recorded throughput_chosen is the
+    analyzer's reading at the chosen M. That extra call IS counted in
+    `result.calls` (calls = strategy_calls + 1). Strategy authors comparing
+    call budgets should account for this constant overhead.
+    """
     eval_, stats = make_oracle(base_url, scenario, alpha=alpha, beta=beta, gamma=gamma)
     t0 = time.monotonic()
     m_chosen = int(search(eval_, m_min, m_max))
+    if not (m_min <= m_chosen <= m_max):
+        raise ValueError(f"strategy returned M={m_chosen} outside [{m_min}, {m_max}]")
     elapsed = time.monotonic() - t0
     final = eval_(m_chosen)  # one extra confirmatory call so we record the throughput at chosen M
     throughput_chosen = float(final["throughput"])

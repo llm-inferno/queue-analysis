@@ -60,3 +60,28 @@ def test_run_strategy_on_scenario_uses_oracle_and_truth(monkeypatch):
     assert result.gap_M == 0
     assert result.scenario == "x"
     assert result.strategy == "ex"
+
+
+def test_run_strategy_rejects_out_of_range_M(monkeypatch):
+    """The harness must raise if a strategy returns M outside [m_min, m_max]."""
+    s = Scenario(name="x", avg_input_tokens=1, avg_output_tokens=1,
+                 target_itl=10.0, target_ttft=10.0, max_queue_size=10)
+
+    def fake_make_oracle(base_url, scenario, **kw):
+        from nous.harness.oracle import OracleStats
+        stats = OracleStats()
+        def eval_(m):
+            stats.calls += 1
+            return {"throughput": 1.0}
+        return eval_, stats
+    monkeypatch.setattr(run_module, "make_oracle", fake_make_oracle)
+
+    def bad_strategy(eval_, m_min, m_max):
+        return m_max + 1  # off-the-end
+
+    truth = {"M_truth": 5, "throughput_truth": 1.0}
+    with pytest.raises(ValueError, match="outside"):
+        run_module.run_strategy_on_scenario(
+            base_url="http://x", scenario=s, search=bad_strategy,
+            m_min=1, m_max=9, truth=truth, strategy_name="bad",
+        )
