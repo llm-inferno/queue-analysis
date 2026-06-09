@@ -1217,9 +1217,9 @@ The properties and the algorithm must hold across these 4 named scenarios. Canon
 JSON: nous/scenarios.json.
 
   baseline          AvgIn=256  AvgOut=512   ITL=20  TTFT=60   QueueSize=128
-  short-tight-ttft  AvgIn=128  AvgOut=256   ITL=20  TTFT=25   QueueSize=128
+  short-tight-ttft  AvgIn=128  AvgOut=256   ITL=20  TTFT=35   QueueSize=128
   long-loose-itl    AvgIn=256  AvgOut=1024  ITL=40  TTFT=200  QueueSize=128
-  small-queue       AvgIn=256  AvgOut=512   ITL=20  TTFT=60   QueueSize=16
+  small-queue       AvgIn=256  AvgOut=512   ITL=20  TTFT=60   QueueSize=4
 
 Harness contract
 

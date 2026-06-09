@@ -34,9 +34,9 @@ Properties and the algorithm must hold across this fixed set of 4 named scenario
 | name | AvgInputTokens | AvgOutputTokens | TargetITL (ms) | TargetTTFT (ms) | MaxQueueSize | tight axis |
 |---|---|---|---|---|---|---|
 | baseline          | 256 | 512  | 20 | 60  | 128 | balanced |
-| short-tight-ttft  | 128 | 256  | 20 | 25  | 128 | TTFT-bound |
+| short-tight-ttft  | 128 | 256  | 20 | 35  | 128 | TTFT-bound (35ms is tight; values below ~31ms are infeasible for this token profile) |
 | long-loose-itl    | 256 | 1024 | 40 | 200 | 128 | ITL-bound, throughput-rich |
-| small-queue       | 256 | 512  | 20 | 60  | 16  | queue-capacity bound |
+| small-queue       | 256 | 512  | 20 | 60  | 4   | queue-capacity bound (M* shifts by ~2 vs baseline; effect is real but small) |
 
 Defined once in `nous/scenarios.json`; both the harness and the planner read from there.
 
@@ -124,7 +124,7 @@ This is **not** a NOUS iteration — it's a one-time setup step run before iter 
 For each (strategy, scenario):
 
 - **`calls`** — number of HTTP `/target` calls the strategy made. Counted by the harness's `target_eval` wrapper. Internal `/solve` calls inside `/target` are **not** part of the score (logged separately as `internal_solve_calls`).
-- **`gap_throughput_rel`** — `(throughput_truth − throughput_chosen) / throughput_truth`. Always ≥ 0; lower is better.
+- **`gap_throughput_rel`** — `(throughput_truth − throughput_chosen) / throughput_truth`. Always ≥ 0; lower is better. If `throughput_truth = 0` (no feasible solution), gap is reported as 0.
 - **`gap_M`** — `|M_chosen − M_truth|`. Reported but not the primary axis (a plateau makes a large `gap_M` benign).
 
 Aggregated across the 4 scenarios for a strategy: report both **worst-case** `(max calls, max gap_throughput_rel)` and **mean** `(mean calls, mean gap_throughput_rel)`. Worst-case is the primary comparison.
@@ -277,6 +277,7 @@ Artifacts land at `queue-analysis/.nous/queue-throughput/runs/iter-N/`. Each ite
 ## 11. Scope notes
 
 - **Out of scope:** changes to the Go analyzer code, additional /-style endpoints, sweeping over `Alpha`/`Beta`/`Gamma`, or more than the 4 scenarios. Robustness arms operate only across the named set.
+- **Note on infeasibility:** The Go analyzer's `/target` endpoint returns HTTP 400 when the (M, target-set) pair is infeasible (e.g., the latency target is outside the achievable range for that token profile, or M=1 fails the ITL check at low load). The harness oracle (`nous/harness/oracle.py`) maps 400 → `{"throughput": 0.0}` and does NOT count it against the call budget; strategies see infeasible Ms as 0-throughput points and continue.
 - **Out of scope:** on-line / streaming variants of the algorithm. The strategy is invoked once per scenario from cold start.
 - **Open question for iter 1:** if the planner finds `f` is *not* unimodal in some scenario, the rest of the staging may need rebalancing. The user steers via the design gate at iter 2.
 - **Open question for iter 5:** whether to hold-out a 5th "validation" scenario for Algorithm-2 (currently no — all 4 scenarios are used everywhere).
