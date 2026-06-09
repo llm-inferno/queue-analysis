@@ -1,0 +1,45 @@
+{
+  "constants": {
+    "alpha": 12.0,
+    "beta": 0.05,
+    "gamma": 0.0005
+  },
+  "search_range": {
+    "m_min": 1,
+    "m_max": 256
+  },
+  "scenarios": [
+    {
+      "name": "baseline",
+      "AvgInputTokens": 256,
+      "AvgOutputTokens": 512,
+      "targetITL": 20.0,
+      "targetTTFT": 60.0,
+      "maxQueueSize": 128
+    },
+    {
+      "name": "short-tight-ttft",
+      "AvgInputTokens": 128,
+      "AvgOutputTokens": 256,
+      "targetITL": 20.0,
+      "targetTTFT": 25.0,
+      "maxQueueSize": 128
+    },
+    {
+      "name": "long-loose-itl",
+      "AvgInputTokens": 256,
+      "AvgOutputTokens": 1024,
+      "targetITL": 40.0,
+      "targetTTFT": 200.0,
+      "maxQueueSize": 128
+    },
+    {
+      "name": "small-queue",
+      "AvgInputTokens": 256,
+      "AvgOutputTokens": 512,
+      "targetITL": 20.0,
+      "targetTTFT": 60.0,
+      "maxQueueSize": 16
+    }
+  ]
+}
