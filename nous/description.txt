@@ -1,0 +1,122 @@
+Background
+
+queue-analysis is a Go REST server that solves a state-dependent Markovian queueing
+model of a vLLM inference server (see pkg/queue/mm1modelstatedependent.go,
+pkg/service/analyzer.go). Two HTTP endpoints on :8080:
+
+  POST /solve   — analyze the queue at a given (RPS, MaxBatchSize, ...) and return
+                  Throughput, AvgITL, AvgTTFT, AvgRespTime, MaxRPS, etc.
+  POST /target  — given (MaxBatchSize, AvgInputTokens, AvgOutputTokens, alpha, beta,
+                  gamma, MaxQueueSize, TargetTTFT, TargetITL), return the maximum RPS
+                  that satisfies AvgITL <= TargetITL and AvgTTFT <= TargetTTFT. The
+                  returned RPS is in the "throughput" field of the response.
+                  Returns HTTP 400 when the (M, target-set) pair is infeasible.
+
+Schemas: examples/problem-data.json (input), examples/solution-target.json (output).
+
+Problem definition
+
+For fixed inputs (alpha, beta, gamma, AvgInputTokens, AvgOutputTokens, MaxQueueSize,
+TargetITL, TargetTTFT), define
+
+    f(M) = throughput returned by /target when maxBatchSize = M.
+
+Find  M* = argmax_{M in [M_min, M_max]} f(M).
+
+A single /target call evaluates f at one M. The meta-algorithm searches over M.
+Fixed for this campaign:  M_min = 1, M_max = 256.  alpha = 12, beta = 0.05,
+gamma = 0.0005 (from examples/problem-data.json).
+
+Scenarios
+
+The properties and the algorithm must hold across these 4 named scenarios. Canonical
+JSON: nous/scenarios.json.
+
+  baseline          AvgIn=256  AvgOut=512   ITL=20  TTFT=60   QueueSize=128
+  short-tight-ttft  AvgIn=128  AvgOut=256   ITL=20  TTFT=35   QueueSize=128
+  long-loose-itl    AvgIn=256  AvgOut=1024  ITL=40  TTFT=200  QueueSize=128
+  small-queue       AvgIn=256  AvgOut=512   ITL=20  TTFT=60   QueueSize=4
+
+The baseline brute-force scan (already cached in nous/cache/) revealed:
+  baseline:         M* = 40, f* = 2.17
+  short-tight-ttft: M* = 69, f* = 2.75
+  long-loose-itl:   M* = 93, f* = 1.48
+  small-queue:      M* = 38, f* = 2.17  (M* shifts by ~2 vs baseline; the queue
+                                          binds weakly)
+
+Some boundary infeasibility was observed during the scan: M=1 fails the ITL check
+on most scenarios. The oracle handles HTTP 400 transparently — see Harness contract.
+
+Harness contract
+
+The harness lives at nous/harness/. Strategies (candidate algorithms) are Python
+files under nous/harness/strategies/. Every strategy exposes:
+
+    def search(target_eval, m_min: int, m_max: int) -> int
+
+target_eval(m) returns the parsed AnalysisData JSON for that maxBatchSize and
+counts the call. The strategy cannot bypass the wrapper.
+
+Infeasibility: if /target returns HTTP 400 for a particular M (the constraint set
+is unachievable at that M), the oracle returns {"throughput": 0.0} and does NOT
+count it against the call budget. Strategies should treat 0-throughput points as
+infeasible regions; reading the truth cache's f_curve before designing a strategy
+shows where these regions are for each scenario.
+
+CLI:
+    python -m nous.harness.run \
+        --scenarios nous/scenarios.json \
+        --strategy nous/harness/strategies/<name>.py \
+        --out <results-path>.json
+
+Outputs one record per scenario:
+  M_chosen, calls, throughput_chosen, M_truth, throughput_truth,
+  gap_throughput_rel, gap_M, wall_clock_seconds, internal_solve_calls.
+
+The harness ALWAYS makes one extra confirmatory eval_(m_chosen) call after the
+strategy returns, so calls = strategy_calls + 1. Strategy budgets must account
+for this constant +1.
+
+Pareto axes and scoring
+
+  calls               number of /target calls the strategy made (lower is better).
+                      Note: a 400-response (infeasibility) does NOT count toward
+                      this budget.
+  gap_throughput_rel  (truth - chosen) / truth  (>= 0; lower is better; reported as
+                                                 0 when truth = 0).
+  gap_M               |M_chosen - M_truth|      (reported, not the primary axis;
+                                                 plateaus make a large gap_M benign)
+
+Aggregate across scenarios as both worst-case (max) and mean. Worst-case is the
+primary comparison. Strategy A Pareto-dominates B iff worst-case A is no worse on
+both (calls, gap_throughput_rel) and strictly better on at least one.
+
+Truth cache: nous/cache/truth-<scenario>.json (already populated by
+nous/harness/baseline_truth.py — do NOT re-run unless scenarios.json changes).
+The truth cache also contains the full f-curve for each scenario, useful for
+property discovery in iter 1.
+
+Stage plan
+
+The campaign is staged. Stay within the current iteration's stage; reject design
+gates that drift.
+
+  Iter 1: Single-scenario shape characterization (use baseline). Observe-mode
+          (no code_changes) — the harness already provides the f-curve in the
+          truth cache. Hypotheses about unimodality, monotonicity, peak existence.
+  Iter 2: Local shape near the peak. Concavity, plateau width. h-robustness across
+          all 4 scenarios. h-ablation across {ITL-target, TTFT-target} drivers.
+  Iter 3: Predicting M* from inputs. Closed-form predictor in {AvgOutputTokens,
+          TargetITL, TargetTTFT, beta, gamma}. Test predictor accuracy across
+          all 4 scenarios.
+  Iter 4: First algorithm justified by Stage 1 properties. code_changes adds
+          nous/harness/strategies/alg1.py implementing the algorithm. Predict
+          worst-case calls and gap_throughput_rel; verify by running run.py.
+  Iter 5: Algorithm-2 vs Algorithm-1 (Pareto comparison). code_changes adds
+          alg2.py. Compare on (worst-case calls, worst-case gap).
+
+Out of scope
+
+  - Changes to the Go analyzer code (only nous/harness/* and nous/strategies/*).
+  - Sweeping alpha/beta/gamma or adding scenarios beyond the 4 named.
+  - Online/streaming variants of the algorithm.
