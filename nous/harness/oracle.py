@@ -27,6 +27,14 @@ def make_oracle(
 
     target_eval increments stats.calls atomically per call and returns the
     parsed AnalysisData JSON for that maxBatchSize.
+
+    Special case — HTTP 400: the analyzer returns 400 when the (M, target-set)
+    pair is infeasible (e.g., the latency target lies outside the achievable
+    region for this token profile).  target_eval returns {"throughput": 0.0}
+    and does NOT increment stats.calls, so callers can treat infeasible M
+    values as zero-throughput without burning their call budget.
+
+    All other 4xx/5xx responses propagate as requests.HTTPError.
     """
     stats = OracleStats()
     url = f"{base_url}/target"
@@ -34,6 +42,12 @@ def make_oracle(
     def target_eval(m: int) -> dict:
         problem = scenario_to_problem(scenario, m, alpha=alpha, beta=beta, gamma=gamma)
         resp = requests.post(url, json=problem, timeout=timeout)
+        if resp.status_code == 400:
+            # /target returns 400 when the (M, target-set) pair is infeasible
+            # (e.g., the latency target is outside the achievable region). Treat
+            # this M as throughput=0 and do NOT count it against the call budget,
+            # so strategies and baseline scans can sweep without crashing.
+            return {"throughput": 0.0}
         resp.raise_for_status()
         stats.calls += 1
         return resp.json()

@@ -45,16 +45,8 @@ def main() -> None:
             curve = []
             best_m, best_t = m_min, -1.0
             for m in range(m_min, m_max + 1):
-                try:
-                    out = eval_(m)
-                    t = float(out["throughput"])
-                except requests.exceptions.HTTPError as exc:
-                    if exc.response is not None and exc.response.status_code == 400:
-                        # Server returns 400 for infeasible m (e.g. batch too small
-                        # to meet targetITL).  Treat as throughput=0 and continue.
-                        t = 0.0
-                    else:
-                        raise
+                out = eval_(m)
+                t = float(out["throughput"])
                 curve.append({"m": m, "throughput": t})
                 if t > best_t:
                     best_t, best_m = t, m

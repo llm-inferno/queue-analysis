@@ -64,3 +64,39 @@ def test_oracle_payload_uses_scenario_fields(monkeypatch):
 
 def test_stats_dataclass_initial_state():
     assert OracleStats().calls == 0
+
+
+def test_oracle_returns_zero_throughput_on_400(monkeypatch):
+    """A 400 from /target means infeasibility at this M; the oracle returns
+    throughput=0.0 and does NOT count the call against the budget."""
+    def fake_400(url, json, **kw):
+        class R:
+            status_code = 400
+            def raise_for_status(self_):
+                import requests as _requests
+                raise _requests.HTTPError("400")
+            def json(self_):
+                return {"error": "infeasible"}
+        return R()
+    monkeypatch.setattr("nous.harness.oracle.requests.post", fake_400)
+    eval_, stats = make_oracle("http://x", SCENARIO)
+    out = eval_(10)
+    assert out == {"throughput": 0.0}
+    assert stats.calls == 0
+
+
+def test_oracle_still_raises_on_500(monkeypatch):
+    """Non-400 errors still propagate."""
+    import requests as _requests
+    def fake_500(url, json, **kw):
+        class R:
+            status_code = 500
+            def raise_for_status(self_):
+                raise _requests.HTTPError("500")
+            def json(self_):
+                return {}
+        return R()
+    monkeypatch.setattr("nous.harness.oracle.requests.post", fake_500)
+    eval_, stats = make_oracle("http://x", SCENARIO)
+    with pytest.raises(_requests.HTTPError):
+        eval_(10)

@@ -22,7 +22,7 @@
       "AvgInputTokens": 128,
       "AvgOutputTokens": 256,
       "targetITL": 20.0,
-      "targetTTFT": 25.0,
+      "targetTTFT": 35.0,
       "maxQueueSize": 128
     },
     {
@@ -39,7 +39,7 @@
       "AvgOutputTokens": 512,
       "targetITL": 20.0,
       "targetTTFT": 60.0,
-      "maxQueueSize": 16
+      "maxQueueSize": 4
     }
   ]
 }
