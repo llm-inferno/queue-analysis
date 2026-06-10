@@ -2,20 +2,14 @@
 
 Finds the smallest M where R(M) >= 1.0 (the TTFT-ITL crossover).
 Uses no predictor — searches the entire [m_min, m_max] range.
-Expected: 8 binary steps + 1 confirmatory = 9 total calls for crossover scenarios.
+Strategy calls: 8 binary steps (the harness adds 1 confirmatory).
 For no-crossover (R never reaches 1.0): returns m_max (on plateau, gap≈0).
 """
 
 from __future__ import annotations
 from typing import Callable
 
-
-def _ratio(result: dict) -> float:
-    ttft = float(result.get("RPSTargetTTFT", 0))
-    itl = float(result.get("RPSTargetITL", 1))
-    if itl <= 0:
-        return 0.0
-    return ttft / itl
+from ._common import ratio
 
 
 def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
@@ -24,7 +18,7 @@ def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
 
     while lo <= hi:
         mid = (lo + hi) // 2
-        r = _ratio(target_eval(mid))
+        r = ratio(target_eval(mid))
         if r >= 1.0:
             best = mid
             hi = mid - 1

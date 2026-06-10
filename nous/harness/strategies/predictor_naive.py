@@ -6,51 +6,30 @@ refinement. This isolates the value of the refinement step.
 
 When predictor error > 0, gap > 0 (demonstrates refinement necessity).
 
-Expected: 2-3 strategy calls + 1 confirmatory = 3-4 total.
+Strategy calls: 2-3 (the harness adds 1 confirmatory call to result.calls).
 Gap: up to 2.47% for baseline (M_est=38 vs M*=40).
+
+NOTE: reads scenarios.json out-of-band to enumerate M_est for *all* test
+scenarios — see the limitation flagged in the PR review (search() contract
+gives no per-scenario inputs).
 """
 
 from __future__ import annotations
 
 import json
-import math
 from pathlib import Path
 from typing import Callable
 
-ALPHA, BETA, GAMMA = 12.0, 0.05, 0.0005
+from ._common import predict_m_est, ratio
 
 SCENARIOS_JSON = Path(__file__).resolve().parents[2] / "scenarios.json"
-
-
-def _predict_m_est(avg_input: float, avg_output: float,
-                   target_itl: float, target_ttft: float) -> int | None:
-    tc = (avg_input + avg_output) / (avg_output + 1)
-    tm = avg_input + avg_output / 2
-    d_slope = BETA * tc + GAMMA * tm
-    d_intercept = ALPHA + BETA + GAMMA * (avg_input + (avg_output + 1) / 2)
-    n_itl = (target_itl - d_intercept) / d_slope
-    if n_itl <= 0:
-        return None
-    pt_n = ALPHA + n_itl * d_slope + (BETA + GAMMA) * avg_input
-    wait_budget = target_ttft - target_itl - pt_n
-    if wait_budget <= 0:
-        return None
-    return round(n_itl + 3.0 * math.sqrt(n_itl) + 0.05 * wait_budget)
-
-
-def _ratio(result: dict) -> float:
-    ttft = float(result.get("RPSTargetTTFT", 0))
-    itl = float(result.get("RPSTargetITL", 1))
-    if itl <= 0:
-        return 0.0
-    return ttft / itl
 
 
 def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
     config = json.loads(SCENARIOS_JSON.read_text())
     m_est_anchors: list[int] = []
     for s in config.get("scenarios", []):
-        m_est = _predict_m_est(
+        m_est = predict_m_est(
             avg_input=s["AvgInputTokens"],
             avg_output=s["AvgOutputTokens"],
             target_itl=s["targetITL"],
@@ -66,7 +45,7 @@ def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
     last_below: int | None = None
 
     for m_est in m_est_anchors:
-        r = _ratio(target_eval(m_est))
+        r = ratio(target_eval(m_est))
         if r >= 1.0:
             # Crossover at or before m_est. This anchor is at/above M*.
             # Return the lower anchor (which is the active M_est) if available.

@@ -55,6 +55,14 @@ class AnalyzerServer(AbstractContextManager):
     def _kill(self) -> None:
         if self._proc is None or self._proc.poll() is not None:
             return
+        # SIGTERM first so `go run` has a chance to clean up its compiled child;
+        # escalate to SIGKILL if it doesn't exit promptly.
+        self._proc.terminate()
+        try:
+            self._proc.wait(timeout=2)
+            return
+        except subprocess.TimeoutExpired:
+            pass
         self._proc.kill()
         try:
             self._proc.wait(timeout=5)

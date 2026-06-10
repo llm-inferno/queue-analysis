@@ -24,6 +24,10 @@ class ScenarioResult:
 
 def compute_gap(*, m_chosen: int, throughput_chosen: float,
                 m_truth: int, throughput_truth: float) -> dict:
+    # Negative raw gap means throughput_chosen > throughput_truth, which can
+    # happen on the plateau (any M >= M* yields f* within float noise; M_chosen
+    # may sit above M_truth). We report 0 in that case rather than a negative
+    # gap so "0 gap = on the plateau" stays a clean invariant.
     if throughput_truth <= 0.0:
         rel = 0.0
     else:

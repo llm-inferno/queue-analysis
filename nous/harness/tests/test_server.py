@@ -30,16 +30,17 @@ def test_wait_for_port_times_out_when_no_listener():
 
 
 def test_analyzer_server_context_manager_lifecycle(monkeypatch):
-    """AnalyzerServer.__enter__ starts the process; __exit__ kills it.
+    """AnalyzerServer.__enter__ starts the process; __exit__ stops it.
     We monkeypatch the actual subprocess so this test does not require Go.
     """
-    started, killed = [], []
+    started, signals = [], []
 
     class FakeProc:
         def __init__(self): self.returncode = None
         def poll(self): return self.returncode
-        def kill(self): killed.append(True); self.returncode = -9
-        def wait(self, timeout=None): self.returncode = -9; return -9
+        def terminate(self): signals.append("term"); self.returncode = -15
+        def kill(self): signals.append("kill"); self.returncode = -9
+        def wait(self, timeout=None): return self.returncode
 
     def fake_popen(cmd, **kwargs):
         started.append(cmd)
@@ -51,4 +52,4 @@ def test_analyzer_server_context_manager_lifecycle(monkeypatch):
     with AnalyzerServer(repo_dir="/tmp", port=8080) as url:
         assert url == "http://127.0.0.1:8080"
         assert started, "Popen should have been called"
-    assert killed, "process should have been killed on exit"
+    assert signals == ["term"], f"expected graceful SIGTERM only, got {signals}"

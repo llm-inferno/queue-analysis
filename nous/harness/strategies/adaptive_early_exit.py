@@ -3,24 +3,18 @@
 Identical to ratio_binary_search except: probes M=m_max first. If R<1.0,
 returns m_max immediately (no crossover — on plateau).
 
-For crossover scenarios: 1 (early check) + 8 (binary) = 9 strategy calls.
-For no-crossover: 1 strategy call.
+Strategy calls: 1 (no-crossover) or 1 (early check) + 8 (binary) = 9
+(crossover); the harness adds 1 confirmatory.
 """
 
 from __future__ import annotations
 from typing import Callable
 
-
-def _ratio(result: dict) -> float:
-    ttft = float(result.get("RPSTargetTTFT", 0))
-    itl = float(result.get("RPSTargetITL", 1))
-    if itl <= 0:
-        return 0.0
-    return ttft / itl
+from ._common import ratio
 
 
 def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
-    r_top = _ratio(target_eval(m_max))
+    r_top = ratio(target_eval(m_max))
     if r_top < 1.0:
         return m_max
 
@@ -29,7 +23,7 @@ def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
 
     while lo <= hi:
         mid = (lo + hi) // 2
-        r = _ratio(target_eval(mid))
+        r = ratio(target_eval(mid))
         if r >= 1.0:
             best = mid
             hi = mid - 1
