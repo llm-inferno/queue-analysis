@@ -1,0 +1,72 @@
+[
+  {
+    "id": "RP-1",
+    "statement": "f(M) = max-RPS-meeting-targets is two-phase: a concave monotone rise from M=2 to M*, followed by an essentially flat plateau for M > M*. The plateau variation is < 0.08% of f* across all tested scenarios.",
+    "confidence": "high",
+    "regime": "All 4 tested scenarios (baseline, short-tight-ttft, long-loose-itl, small-queue) with M in [1, 256]",
+    "evidence": ["iteration-1-h-main", "iteration-1-h-robustness"],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "The /target endpoint returns throughput = min(RPSTargetTTFT, RPSTargetITL) (pkg/analyzer/queueanalyzer.go:242). RPSTargetTTFT increases with M (larger batches amortize queueing delay). RPSTargetITL decreases slowly with M (decode time scales linearly via gamma*M). The min-selection creates a crossover at M* beyond which the slowly-decaying ITL rate dominates, producing the flat plateau. Source: queueanalyzer.go:263-281.",
+    "applicability_bounds": "Holds when both constraints are active and the system is not trivially infeasible. The short-tight-ttft scenario (ITL never binds) still exhibits the two-phase shape via TTFT saturation alone. May not hold if gamma (decode-time-per-token) is very large, causing RPSTargetITL to decay steeply.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-2",
+    "statement": "The peak M* = argmax f(M) coincides exactly with the binding-constraint crossover: M* is the smallest M where RPSTargetTTFT first exceeds RPSTargetITL. Below M*, TTFT is the binding constraint; at and above M*, ITL binds.",
+    "confidence": "high",
+    "regime": "Scenarios with both constraints active (crossover scenarios): baseline (M*=40), long-loose-itl (M*=93). Not applicable to scenarios where one constraint never binds (short-tight-ttft).",
+    "evidence": ["iteration-1-h-main"],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "At M < M*: RPSTargetTTFT < RPSTargetITL, so throughput = RPSTargetTTFT, which is increasing in M. At M = M*: crossover, throughput is maximized. At M > M*: RPSTargetITL < RPSTargetTTFT, so throughput = RPSTargetITL, which is slowly decreasing. Confirmed for baseline: M=39 TTFT-bound (2.1499 < 2.1670), M=40 ITL-bound (2.1856 > 2.1668).",
+    "applicability_bounds": "Requires both constraints to be active. If TTFT and ITL targets are loose enough that one is never binding, M* is defined by the saturation of the binding constraint and has no sharp crossover meaning. For short-tight-ttft, M* represents the plateau onset, not a crossover.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-3",
+    "statement": "The rising portion of f(M) has a brief convex onset (M=2 to M≈6-9) followed by sustained concavity. The transition from 90% to 99% of f* spans 4-21 M-steps depending on AvgOutputTokens. Long output sequences (AvgOutputTokens=1024) produce the widest transition (21 steps); short sequences produce narrow transitions (4 steps).",
+    "confidence": "high",
+    "regime": "M in [2, M*], all 4 tested scenarios",
+    "evidence": ["iteration-1-h-main", "iteration-1-h-robustness"],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "The convex onset occurs because at small M, service rate is dominated by alpha (fixed overhead) and increasing M provides super-linear throughput gains per unit M. Once the alpha-dominated regime ends, the beta*M and gamma*M terms in service time dominate, producing diminishing returns (concavity). Wider transitions for large AvgOutputTokens occur because each M increment provides smaller relative throughput improvement when decode time dominates total service time.",
+    "applicability_bounds": "Concavity may be obscured by binary-search noise in scenarios where the function is essentially flat (short-tight-ttft, where TTFT saturates by M=26). The convex onset ends earlier (M≈6) for long-output scenarios and later (M≈8-9) for short-output scenarios.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-4",
+    "statement": "M=1 is always infeasible (oracle returns HTTP 400) for all tested scenarios. Binary-search strategies can start at M=2 without penalty — infeasible calls do not count toward the call budget.",
+    "confidence": "high",
+    "regime": "All 4 tested scenarios with the given model constants (alpha=12, beta=0.05, gamma=0.0005)",
+    "evidence": ["iteration-1-h-main", "iteration-1-h-robustness"],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "At M=1, the single-request batch has decode time = alpha + beta + gamma*AvgOutputTokens, which exceeds targetITL for all tested scenarios. The oracle returns HTTP 400, and the harness oracle wrapper returns {throughput: 0.0} without counting the call (oracle.py:42-54).",
+    "applicability_bounds": "May not hold if targetITL is very large (e.g., targetITL=999) or if model constants are changed to reduce decode time below targetITL at M=1.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-5",
+    "statement": "The optimization problem is fundamentally a plateau-onset detection problem, not a peak-finding problem. Since f(M) is monotone-then-flat (not unimodal with meaningful decay), the goal is to find the smallest M where f(M) ≥ (1 - epsilon) * f_max, not to find the exact maximum.",
+    "confidence": "high",
+    "regime": "All 4 tested scenarios",
+    "evidence": ["iteration-1-h-main", "iteration-1-h-robustness"],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "The plateau is so flat (< 0.08% variation) that any M in the plateau region is essentially optimal. The M* returned by the truth cache is the smallest M achieving the global maximum, but M*-1 typically achieves > 99.98% of the maximum throughput. Algorithms designed for unimodal-peak-finding (e.g., ternary search) will work but are suboptimal for this problem shape.",
+    "applicability_bounds": "Holds when plateau variation is small enough to be negligible for the use case. If a future scenario has a larger plateau variation (e.g., due to finite queue effects or different model constants), the peak-finding framing may become more relevant.",
+    "superseded_by": null,
+    "category": "algorithmic",
+    "status": "active"
+  }
+]

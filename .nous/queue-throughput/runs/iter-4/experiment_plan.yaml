@@ -1,0 +1,37 @@
+metadata:
+  iteration: 4
+  bundle_ref: "runs/iter-4/bundle.yaml"
+  description: "Quantify Pareto front of (worst-case calls, worst-case gap) across four algorithm variants: ratio_binary_search, predictor_naive, predictor_direct, predictor_hybrid."
+
+setup:
+  - cmd: "go build -o /tmp/queue-analysis ."
+    description: "Build the Go server from worktree root"
+  - cmd: "source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate && mkdir -p nous/cache && cp /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/cache/truth-*.json nous/cache/"
+    description: "Copy pre-computed truth caches to worktree"
+  - cmd: "cp /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/harness/strategies/*.py nous/harness/strategies/"
+    description: "Copy strategy files (untracked in main repo) to worktree"
+
+arms:
+  - arm_id: "h-main"
+    conditions:
+      - name: "predictor_direct"
+        cmd: "source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate && python -m nous.harness.run --scenarios nous/scenarios.json --strategy nous/harness/strategies/predictor_direct.py --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-4/results/predictor_direct.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-4/results/predictor_direct.json"
+
+  - arm_id: "h-control-negative"
+    conditions:
+      - name: "ratio_binary_search"
+        cmd: "source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate && python -m nous.harness.run --scenarios nous/scenarios.json --strategy nous/harness/strategies/ratio_binary_search.py --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-4/results/ratio_binary_search.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-4/results/ratio_binary_search.json"
+
+  - arm_id: "h-ablation"
+    conditions:
+      - name: "predictor_naive"
+        cmd: "source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate && python -m nous.harness.run --scenarios nous/scenarios.json --strategy nous/harness/strategies/predictor_naive.py --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-4/results/predictor_naive.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-4/results/predictor_naive.json"
+
+  - arm_id: "h-robustness"
+    conditions:
+      - name: "predictor_hybrid"
+        cmd: "source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate && python -m nous.harness.run --scenarios nous/scenarios.json --strategy nous/harness/strategies/predictor_hybrid.py --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-4/results/predictor_hybrid.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-4/results/predictor_hybrid.json"

@@ -1,0 +1,41 @@
+{
+  "iteration": 3,
+  "bundle_ref": "runs/iter-3/bundle.yaml",
+  "arms": [
+    {
+      "arm_type": "h-main",
+      "predicted": "Closed-form predictor M_est = round(n_ITL + 3.0*sqrt(n_ITL) + 0.05*wait_budget) achieves |M_est - M*| <= 5 for all crossover scenarios, with max_error <= 2.",
+      "observed": "baseline: M_est=38 vs M_truth=40 (error=2). long-loose-itl: M_est=91 vs M_truth=93 (error=2). small-queue: M_est=38 vs M_truth=38 (error=0). short-tight-ttft: correctly identified as no-crossover (M_est=None). max_error=2, all_within_5=True. Component breakdown (baseline): n_ITL=23.25 (61.2%), buffer=14.47 (38.1%), wait=0.37 (0.97%) of M_est=38. Two dominant components account for 99.03% of M_est for small-wait-budget scenarios.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "Max error is exactly 2, better than the <=5 bound. The two dominant components (n_ITL + 3*sqrt(n_ITL)) account for 99% of M_est for small-wait-budget scenarios (baseline, small-queue), confirming the mechanism. For long-loose-itl, the two dominant components account for 93.7% (wait term contributes 5.9%), which is below 95% but expected given the large wait_budget=107ms."
+    },
+    {
+      "arm_type": "h-ablation",
+      "predicted": "Removing wait_budget term increases long-loose-itl error from <=2 to >=6, while baseline and small-queue remain at error<=2.",
+      "observed": "Without wait_budget: baseline error=2 (unchanged), small-queue error=0 (unchanged), long-loose-itl error=8 (was 2, increased by 6). max_error=8, all_within_5=False. The ablated M_est for long-loose-itl: 85 vs M_truth=93. Wait term contribution removed: 0.05*107.51=5.38 units, causing under-prediction by 8 units total.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "Error increase is exactly 6 (from 2 to 8), exceeding the >=6 threshold. The mechanism is confirmed: the wait_budget term (0.05*107.51=5.38, rounds to 5-6) is load-bearing for long-loose-itl. Removing it shifts M_est from 91 to 85, causing under-prediction. Baseline and small-queue are unaffected as predicted (0.05*7.38=0.37 rounds to 0)."
+    },
+    {
+      "arm_type": "h-control-negative",
+      "predicted": "For short-tight-ttft, wait_budget < 0 (specifically ~-11.3ms), correctly detecting no-crossover. The sign of wait_budget perfectly separates crossover (positive) from no-crossover (negative) for all 4 scenarios.",
+      "observed": "wait_budget values: baseline=+7.38ms, short-tight-ttft=-11.29ms, long-loose-itl=+107.51ms, small-queue=+7.38ms. Crossover classification: short-tight-ttft has_crossover=False (wait_budget<0), all others has_crossover=True (wait_budget>0). Classification is perfect: 3/3 crossover scenarios and 1/1 no-crossover scenario correctly identified.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "The sign of wait_budget = targetTTFT - targetITL - PrefillTime(n_ITL) is -11.29ms for short-tight-ttft, confirming that the TTFT budget is exhausted by prefill+decode even at zero queueing delay. This perfectly matches the iter-2 observation that R(M) never reaches 1.0 for this scenario (max R ~ 0.50). The mechanism is valid: negative wait_budget means TTFT is permanently binding at all M values."
+    },
+    {
+      "arm_type": "h-robustness",
+      "predicted": "Predictor-guided strategy achieves gap=0 in at most 5 total calls for all crossover scenarios (44% reduction from 9 calls). No-crossover case achieves gap~=0 via plateau landing in at most 5 calls.",
+      "observed": "All 4 scenarios: baseline: M_chosen=40 (exact, M_truth=40), calls=5, gap_throughput_rel=0.0. short-tight-ttft: M_chosen=92, calls=5, gap_throughput_rel=1.3e-5 (~0, plateau landing). long-loose-itl: M_chosen=93 (exact, M_truth=93), calls=5, gap_throughput_rel=0.0. small-queue: M_chosen=38 (exact, M_truth=38), calls=4, gap_throughput_rel=0.0. Max calls=5, all gap_throughput_rel<0.001%. Total calls vs full binary search: 5 vs 9 = 44% reduction for crossover scenarios.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "All 3 crossover scenarios achieve exact M* with gap_M=0 and gap_throughput_rel=0. Small-queue uses only 4 total calls (strategy calls=3 + 1 harness confirmatory). The short-tight-ttft no-crossover case returns M=92 (gap_M=23) but lands on the plateau with gap_throughput_rel=1.3e-5 (~0). The algorithm uses M_est anchors as dual-purpose identification+binary-search probes, requiring no additional identification overhead. Implementation note: the strategy correctly identifies all scenarios without any scenario-specific configuration by using the predictor formula applied to all scenarios in scenarios.json."
+    }
+  ],
+  "experiment_valid": true,
+  "discrepancy_analysis": "All 4 arms confirmed. h-main max_error=2 is better than the <=5 prediction and matches the <=2 refinement in the handoff. h-ablation error increase is exactly 6 (2->8), matching the >=6 threshold. h-control-negative: perfect binary classification via sign(wait_budget). h-robustness: all crossover scenarios achieve exact M* (gap_M=0) in at most 5 calls, matching the 44% reduction prediction. The no-crossover scenario achieves gap_throughput_rel~=0 via plateau landing as predicted. The dominant_component_pct for small-wait-budget scenarios is 99.03% (>95% threshold). For long-loose-itl (large wait_budget=107ms), the two dominant components contribute 93.7%, slightly below 95%, but the prediction specifically applies to 'scenarios with small wait_budget' where the threshold is met.",
+  "dominant_component_pct": 99.03
+}

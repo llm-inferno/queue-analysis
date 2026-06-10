@@ -1,0 +1,81 @@
+diff --git a/nous/harness/strategies/ratio_binary_search.py b/nous/harness/strategies/ratio_binary_search.py
+new file mode 100644
+index 0000000..52e4c73
+--- /dev/null
++++ b/nous/harness/strategies/ratio_binary_search.py
+@@ -0,0 +1,75 @@
++"""Ratio binary search strategy.
++
++Finds M* in O(log N) oracle calls by binary-searching on R(M) =
++RPSTargetTTFT / RPSTargetITL crossing 1.0. The ratio is strictly
++monotone increasing up to and through the crossover for all scenarios
++with a two-phase structure.
++
++Fallback for no-crossover case: if the search converges to m_max
++without ever finding R >= 1.0, return the M with the highest observed
++throughput from the binary search probes (plateau coverage is good
++enough because probes span [m_min, m_max] logarithmically).
++"""
++
++from __future__ import annotations
++from typing import Callable
++
++
++def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
++    """Return the smallest M where RPSTargetTTFT >= RPSTargetITL.
++
++    Falls back to the highest-throughput observed M if no crossover exists.
++    Uses at most ceil(log2(m_max - m_min + 1)) calls; the harness adds 1
++    confirmatory call on top.
++    """
++    lo, hi = m_min, m_max
++    observations: list[tuple[int, float]] = []  # (m, throughput) for fallback
++    crossover_found = False
++    last_eval: dict | None = None  # result for the converged lo, if evaluated
++
++    while lo < hi:
++        mid = (lo + hi) // 2
++        result = target_eval(mid)
++        t = float(result.get("throughput", 0.0))
++
++        if t <= 0.0:
++            # Infeasible — only happens at very low M; move lower bound up
++            lo = mid + 1
++            continue
++
++        observations.append((mid, t))
++
++        ttft = result.get("RPSTargetTTFT")
++        itl = result.get("RPSTargetITL")
++
++        if ttft is None or itl is None or itl <= 0.0:
++            # Unexpected missing fields — treat as below-crossover
++            lo = mid + 1
++            continue
++
++        ratio = ttft / itl
++        if ratio >= 1.0:
++            crossover_found = True
++            last_eval = result
++            hi = mid
++        else:
++            lo = mid + 1
++
++    # If the last hi=mid step set lo==hi==mid, last_eval is already the answer.
++    # If the last step was lo=mid+1 (lo not yet evaluated), we must probe once.
++    if last_eval is None or lo != hi:
++        last_eval = target_eval(lo)
++        t = float(last_eval.get("throughput", 0.0))
++        if t > 0.0:
++            observations.append((lo, t))
++        ttft = last_eval.get("RPSTargetTTFT")
++        itl = last_eval.get("RPSTargetITL")
++        if ttft is not None and itl is not None and itl > 0.0 and ttft / itl >= 1.0:
++            crossover_found = True
++
++    # No-crossover fallback: search converged to m_max with R < 1.0 everywhere
++    if not crossover_found and lo == m_max:
++        if observations:
++            return max(observations, key=lambda x: x[1])[0]
++
++    return lo

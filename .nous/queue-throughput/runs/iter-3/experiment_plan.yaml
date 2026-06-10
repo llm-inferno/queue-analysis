@@ -1,0 +1,47 @@
+metadata:
+  iteration: 3
+  bundle_ref: "runs/iter-3/bundle.yaml"
+
+setup:
+  - cmd: "go build -o /tmp/queue-analysis /Users/tantawi/Projects/llm-inferno/queue-analysis"
+    description: "Build the Go analyzer binary"
+
+arms:
+  - arm_id: "h-main"
+    conditions:
+      - name: "full-predictor"
+        cmd: "cd /Users/tantawi/Projects/llm-inferno/queue-analysis && python3 .nous/queue-throughput/runs/iter-3/inputs/run_predictor.py > /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/results/h-main/predictor_full.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/results/h-main/predictor_full.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/inputs/run_predictor.py"
+
+  - arm_id: "h-ablation"
+    conditions:
+      - name: "no-wait-budget"
+        cmd: "cd /Users/tantawi/Projects/llm-inferno/queue-analysis && python3 .nous/queue-throughput/runs/iter-3/inputs/run_predictor.py --no-wait-budget > /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/results/h-ablation/predictor_no_wait_budget.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/results/h-ablation/predictor_no_wait_budget.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/inputs/run_predictor.py"
+
+  - arm_id: "h-control-negative"
+    conditions:
+      - name: "crossover-detection"
+        cmd: "cd /Users/tantawi/Projects/llm-inferno/queue-analysis && python3 .nous/queue-throughput/runs/iter-3/inputs/run_predictor.py > /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/results/h-control-negative/crossover_detection.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/results/h-control-negative/crossover_detection.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/inputs/run_predictor.py"
+
+  - arm_id: "h-robustness"
+    conditions:
+      - name: "predictor-hybrid-strategy"
+        cmd: >
+          cd /Users/tantawi/Projects/llm-inferno/queue-analysis &&
+          source nous/.venv/bin/activate &&
+          python -m nous.harness.run
+            --scenarios nous/scenarios.json
+            --strategy nous/harness/strategies/predictor_hybrid.py
+            --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/results/h-robustness/predictor_hybrid_results.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-3/results/h-robustness/predictor_hybrid_results.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/harness/strategies/predictor_hybrid.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"

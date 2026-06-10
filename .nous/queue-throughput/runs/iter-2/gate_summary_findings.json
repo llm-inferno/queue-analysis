@@ -1,0 +1,10 @@
+{
+  "gate_type": "findings",
+  "summary": "All four experimental arms confirmed their predictions exactly. A binary search on the ratio R(M) = RPSTargetTTFT / RPSTargetITL finds the optimal MaxBatchSize M* in exactly 9 calls for all crossover scenarios (baseline M*=40, long-loose-itl M*=93, small-queue M*=38) with zero throughput gap. The no-crossover fallback also succeeds with gap=0.0 in 10 calls.",
+  "key_points": [
+    "Main hypothesis CONFIRMED: Binary search on the TTFT/ITL ratio crossing 1.0 finds M* exactly (gap_throughput_rel = 0.0000) in 9 total calls (8 search + 1 confirmatory) for all three crossover scenarios \u2014 a major improvement over linear scan which required 12 calls and failed entirely on long-loose-itl (gap=0.2607).",
+    "Ablation CONFIRMED: The two-phase throughput structure is caused solely by min(TTFT-constraint, ITL-constraint). ITL-only peaks at M=24 with ~3% decay; TTFT-only is monotone-then-flat (drop < 0.001%). Neither alone produces the exploitable crossover at M=40.",
+    "Negative control CONFIRMED: For short-tight-ttft (no crossover exists), the fallback detects R(M) never reaches 1.0, returns M=224 on the flat plateau with gap=0.0000 in only 10 calls \u2014 well under the 15-call budget.",
+    "Robustness CONFIRMED: First-difference ratio at M* is always < 0.55 (range 0.30\u20130.54) versus normal concavity ratio of 0.97\u20130.98, giving unambiguous separation > 0.40 for all crossover scenarios \u2014 an independent detection signal."
+  ]
+}

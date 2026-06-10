@@ -1,0 +1,10 @@
+{
+  "gate_type": "findings",
+  "summary": "All three experimental arms confirmed their predictions. The /target endpoint's throughput-vs-MaxBatchSize curve exhibits a clean two-phase structure (monotone rise then flat plateau) across all tested scenarios, with a sharp TTFT/ITL binding-constraint crossover at a predictable M* value.",
+  "key_points": [
+    "CONFIRMED (h-main): Baseline scenario shows perfectly monotone rise from M=2 to M*=40, then plateau with only 0.017% variation (predicted <0.05%). Crossover from TTFT-bound to ITL-bound occurs exactly at M=40. Post-onset concavity verified. Peak throughput = 2.1668 req/s.",
+    "CONFIRMED (h-control-negative): Short-tight-ttft scenario is always TTFT-bound (ITL never binds, RPSTargetITL is 2.3\u20132.7\u00d7 RPSTargetTTFT at all M). The apparent M*=69 is just binary-search noise \u2014 gap from M=34 to M=69 is only 0.00096%, and the 18 'violations' are all in the flat region at <0.004% magnitude.",
+    "CONFIRMED (h-robustness): All 4 scenarios show two-phase structure with plateau variation <0.08% (predicted <0.15%), rising-region violations <0.004% of peak (predicted <0.01%), and transition widths 4\u201321 steps. Long-loose-itl has widest transition at exactly 21 steps with crossover at M=93, matching the known truth.",
+    "No surprises or refutations. The only minor note is that concavity in the short-tight-ttft rising region couldn't be meaningfully tested (rising region ends at M\u22489, too few points), but this doesn't affect any conclusion."
+  ]
+}

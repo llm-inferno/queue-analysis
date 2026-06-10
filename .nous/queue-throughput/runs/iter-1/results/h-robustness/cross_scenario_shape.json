@@ -1,0 +1,113 @@
+{
+  "scenarios": {
+    "baseline": {
+      "scenario": "baseline",
+      "M_truth": 40,
+      "peak_throughput": 2.1667778,
+      "plateau_variation_pct": 0.016813,
+      "rising_violations_count": 0,
+      "max_rising_violation_pct": 0,
+      "transition_width_90_99": 5,
+      "m90": 34,
+      "m99": 39,
+      "convex_onset_ends_M": 8,
+      "post_onset_concave": true,
+      "first_10_rising_diffs": [
+        0.042609997,
+        0.058496056,
+        0.06743466399999999,
+        0.07241554,
+        0.0750403,
+        0.07620405000000002,
+        0.07641451999999999,
+        0.07599152999999997,
+        0.07513350000000008,
+        0.07399219999999995
+      ]
+    },
+    "short-tight-ttft": {
+      "scenario": "short-tight-ttft",
+      "M_truth": 69,
+      "peak_throughput": 2.7530658,
+      "plateau_variation_pct": 0.001435,
+      "rising_violations_count": 18,
+      "max_rising_violation_pct": 0.0037412836264279,
+      "transition_width_90_99": 4,
+      "m90": 22,
+      "m99": 26,
+      "convex_onset_ends_M": 9,
+      "post_onset_concave": false,
+      "first_10_rising_diffs": [
+        0.066720223,
+        0.10030311,
+        0.12149319,
+        0.13471551999999998,
+        0.14285389000000004,
+        0.14763229999999994,
+        0.15004233,
+        0.1507634,
+        0.1501749000000001,
+        0.1485725
+      ]
+    },
+    "long-loose-itl": {
+      "scenario": "long-loose-itl",
+      "M_truth": 93,
+      "peak_throughput": 1.4816346,
+      "plateau_variation_pct": 0.028361,
+      "rising_violations_count": 0,
+      "max_rising_violation_pct": 0,
+      "transition_width_90_99": 21,
+      "m90": 69,
+      "m99": 90,
+      "convex_onset_ends_M": 6,
+      "post_onset_concave": true,
+      "first_10_rising_diffs": [
+        0.029018939999999997,
+        0.03550392,
+        0.03838139,
+        0.039473980000000006,
+        0.039604769999999984,
+        0.03918789,
+        0.03844935999999999,
+        0.037524730000000006,
+        0.03649319000000001,
+        0.03540930000000003
+      ]
+    },
+    "small-queue": {
+      "scenario": "small-queue",
+      "M_truth": 38,
+      "peak_throughput": 2.1684475,
+      "plateau_variation_pct": 0.072633,
+      "rising_violations_count": 0,
+      "max_rising_violation_pct": 0,
+      "transition_width_90_99": 4,
+      "m90": 33,
+      "m99": 37,
+      "convex_onset_ends_M": 8,
+      "post_onset_concave": true,
+      "first_10_rising_diffs": [
+        0.042641601,
+        0.058710138999999995,
+        0.068027604,
+        0.0734979,
+        0.07663999999999999,
+        0.07828295000000002,
+        0.07891163000000001,
+        0.07883382,
+        0.07825890000000002,
+        0.07731829999999995
+      ]
+    }
+  },
+  "all_plateau_var_below_015pct": true,
+  "all_rising_monotone_below_001pct": true,
+  "transition_widths": {
+    "baseline": 5,
+    "short-tight-ttft": 4,
+    "long-loose-itl": 21,
+    "small-queue": 4
+  },
+  "widest_scenario": "long-loose-itl"
+}
