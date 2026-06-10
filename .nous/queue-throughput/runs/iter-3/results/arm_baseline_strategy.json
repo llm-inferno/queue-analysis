@@ -1,0 +1,54 @@
+[
+  {
+    "scenario": "baseline",
+    "strategy": "predictor_guided_search",
+    "M_chosen": 40,
+    "calls": 9,
+    "throughput_chosen": 2.1667778,
+    "M_truth": 40,
+    "throughput_truth": 2.1667778,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.021470958999998402,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "short-tight-ttft",
+    "strategy": "predictor_guided_search",
+    "M_chosen": 129,
+    "calls": 8,
+    "throughput_chosen": 2.7530653,
+    "M_truth": 69,
+    "throughput_truth": 2.7530658,
+    "gap_throughput_rel": 1.8161571004582928e-07,
+    "gap_M": 60,
+    "wall_clock_seconds": 0.0130416249994596,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "long-loose-itl",
+    "strategy": "predictor_guided_search",
+    "M_chosen": 93,
+    "calls": 9,
+    "throughput_chosen": 1.4816346,
+    "M_truth": 93,
+    "throughput_truth": 1.4816346,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.011466416999610374,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "small-queue",
+    "strategy": "predictor_guided_search",
+    "M_chosen": 38,
+    "calls": 9,
+    "throughput_chosen": 2.1684475,
+    "M_truth": 38,
+    "throughput_truth": 2.1684475,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.008468333999189781,
+    "internal_solve_calls": 0
+  }
+]

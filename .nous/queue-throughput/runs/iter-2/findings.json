@@ -1,0 +1,41 @@
+{
+  "iteration": 2,
+  "bundle_ref": "runs/iter-2/bundle.yaml",
+  "arms": [
+    {
+      "arm_type": "h-main",
+      "predicted": "For all scenarios with a crossover (baseline, long-loose-itl, small-queue), binary search on R(M) = RPSTargetTTFT/RPSTargetITL crossing 1.0 finds M* exactly (gap_throughput_rel = 0.0) in at most 9 total calls (8 search + 1 confirmatory). R(M) is strictly monotone increasing in [2, M*+5] for all three scenarios.",
+      "observed": "baseline: M_chosen=40, M_truth=40, calls=9, gap=0.0000. long-loose-itl: M_chosen=93, M_truth=93, calls=9, gap=0.0000. small-queue: M_chosen=38, M_truth=38, calls=9, gap=0.0000. All three crossover scenarios found M* exactly in exactly 9 total calls (8 binary search steps + 1 harness confirmatory). Compared to linear scan (12 calls for baseline/small-queue, and linear scan with m=[35,45] failed long-loose-itl with gap=0.2607). Full-range binary search succeeded on all.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "The ratio binary search uses exactly ceil(log2(255))=8 search calls plus 1 confirmatory for the 3 crossover scenarios. R(M) monotonicity up to M* holds perfectly — the binary search never makes a wrong decision."
+    },
+    {
+      "arm_type": "h-ablation",
+      "predicted": "With only ITL active (targetTTFT=9999): f(M) peaks at M=24 for baseline and then decays by approximately 3%. With only TTFT active (targetITL=9999): f(M) is monotone-then-flat with negligible drop (< 0.001%) from peak to M=256. Neither single-constraint shape has the sharp crossover at M=40.",
+      "observed": "ITL-only: peak at M=24, throughput=2.2332, drop from peak to M=256 = 2.996% — matches predicted ~3% decay. TTFT-only: peak at M=88, throughput=2.7677, drop = 0.000079% (< 0.001%) — essentially flat plateau. Both active: peak at M=40, throughput=2.1668. The min(TTFT, ITL) interaction is confirmed as the sole cause of the two-phase structure and M*=40 crossover.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "ITL-only peaks at exactly M=24 as predicted. TTFT-only drop of 7.9e-5% is effectively zero, confirming monotone-then-flat shape. The mechanism at queueanalyzer.go:242 is verified: removing either constraint eliminates the exploitable crossover."
+    },
+    {
+      "arm_type": "h-control-negative",
+      "predicted": "For short-tight-ttft, R(M) never reaches 1.0 (max ratio ~0.50). The ratio binary search converges to m_max=256 and triggers the fallback path. The fallback returns M with gap_throughput_rel < 0.001, using no more than 15 total calls.",
+      "observed": "short-tight-ttft: M_chosen=224, M_truth=69, calls=10, gap=0.0000. The strategy detected no crossover (all binary search probes had R < 1.0), triggered the fallback, and returned M=224 — a point on the flat plateau. gap=0.0000 (throughput at M=224 equals throughput at M_truth=69 to full precision). Total calls=10, well under the 15-call budget.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "The fallback correctly identifies the no-crossover case and returns the highest-throughput M observed during the binary search. M=224 is deep in the plateau — any M >= 26 achieves essentially the same throughput for this scenario."
+    },
+    {
+      "arm_type": "h-robustness",
+      "predicted": "For all crossover scenarios, df(M*)/df(M*-1) < 0.55, normal concavity ratio in [0.96, 0.99], and separation > 0.40.",
+      "observed": "baseline: ratio_at_crossover=0.4596, normal=[0.9722, 0.9733], separation=0.5127. long-loose-itl: ratio_at_crossover=0.5387, normal=[0.9829, 0.9844], separation=0.4442. small-queue: ratio_at_crossover=0.2997, normal=[0.9690, 0.9716], separation=0.6692. All three scenarios satisfy all criteria: crossover ratio < 0.55 (all ✓), normal ratio in [0.96, 0.99] (all ✓), separation > 0.40 (all ✓). crossover_detectable=True for all.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "long-loose-itl's crossover ratio of 0.539 is closest to the 0.55 threshold but still satisfies it. The first-difference signature provides an independent confirmation mechanism that is unambiguous across all tested scenarios. Minimum separation is 0.444 for long-loose-itl, well above the 0.40 requirement."
+    }
+  ],
+  "experiment_valid": true,
+  "discrepancy_analysis": "All four arms confirmed. The ratio binary search strategy finds M* exactly for all crossover scenarios in exactly ceil(log2(255))+1=9 total calls (8 search + 1 harness confirmatory). The no-crossover fallback (short-tight-ttft) returns a plateau point with gap=0.0 in 10 calls. Single-constraint ablation confirms the two-phase structure is caused entirely by min(TTFT, ITL) — neither constraint alone produces the exploitable crossover. The first-difference ratio signature at M* is unambiguous (ratio < 0.55 vs normal 0.97-0.98) across all crossover scenarios.",
+  "dominant_component_pct": null
+}

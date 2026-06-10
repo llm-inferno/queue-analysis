@@ -18,3 +18,11 @@ vendor/
 .DS_Store
 ~*
 CLAUDE.md
+
+# Python bytecode
+__pycache__/
+
+# nous campaign artifacts
+nous/cache/
+nous/results/
+nous/.venv/

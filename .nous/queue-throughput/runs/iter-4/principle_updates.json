@@ -1,0 +1,58 @@
+[
+  {
+    "id": "RP-12",
+    "statement": "The Pareto front of (worst-case oracle calls, worst-case gap_throughput_rel) for all tested algorithms has exactly two non-dominated points: predictor_naive (3 calls, 2.47% gap) and predictor_direct (5 calls, 0.00083% gap). The 44% call reduction from ratio_binary_search (9 calls) to predictor_direct (5 calls) requires both components: the predictor narrows the search space, and the ratio refinement eliminates residual gap.",
+    "confidence": "high",
+    "regime": "All 4 scenarios (baseline, short-tight-ttft, long-loose-itl, small-queue) with predictor coefficients (3.0, 0.05) and [m_min=2, m_max=256]",
+    "evidence": ["iteration-4-h-main", "iteration-4-h-control-negative", "iteration-4-h-ablation", "iteration-4-h-robustness"],
+    "contradicts": [],
+    "extraction_iteration": 4,
+    "mechanism": "Binary search on R(M)=RPSTargetTTFT/RPSTargetITL over [2,256] requires ceil(log2(255))+1=9 calls. The predictor (RP-9) reduces the search space to a ±2 window around M_est, requiring at most 2 refinement probes + 1 confirmatory = 5 total. Removing the ratio refinement (predictor_naive) saves 2 calls but accepts 2.47% gap when predictor error=2.",
+    "applicability_bounds": "Holds when predictor error ≤ 2 (validated for 3 crossover scenarios). The ±2 tight trust may fail for out-of-calibration scenarios — predictor_hybrid (±5) provides a safety margin at the cost of +0.5 mean calls.",
+    "superseded_by": null,
+    "category": "algorithm",
+    "status": "active"
+  },
+  {
+    "id": "RP-13",
+    "statement": "For no-crossover scenarios (wait_budget < 0), the optimal algorithm returns m_max. Both predictor_direct and ratio_binary_search correctly land on the plateau for short-tight-ttft (M_chosen=256 vs M_truth=69), with gap_throughput_rel < 0.001%. The plateau is genuinely flat — any M ≥ M* achieves the same throughput within 0.001%.",
+    "confidence": "high",
+    "regime": "short-tight-ttft scenario (no-crossover: R(M)<1.0 for all M in [2,256]); consistent with RP-1's <0.08% plateau bound",
+    "evidence": ["iteration-4-h-main", "iteration-4-h-control-negative"],
+    "contradicts": [],
+    "extraction_iteration": 4,
+    "mechanism": "For no-crossover scenarios, RPSTargetTTFT never exceeds RPSTargetITL (TTFT is always the binding constraint). The algorithm correctly identifies no crossing point and falls through to return m_max. The gap between f(m_max) and f(M_truth) is 8.28e-6 (0.00083%), confirming RP-1's plateau flatness claim with a concrete measurement.",
+    "applicability_bounds": "Measured on short-tight-ttft. The M_truth=69 designation is the smallest plateau M; any M ≥ 69 gives the same throughput within 0.001%. The gap_M metric (187 for this scenario) is misleading — it measures |M_chosen - M_truth| which is large, but gap_throughput_rel is the meaningful performance measure.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-14",
+    "statement": "The ratio refinement step contributes the critical correctness guarantee: without it (predictor_naive), predictor error of 2 translates directly to throughput gap of 2.47% for crossover scenarios. The gap magnitude follows f(M_est)/f(M*) ≈ 1 - slope*(M* - M_est)/f(M*), where slope is the local derivative of f at M_est.",
+    "confidence": "high",
+    "regime": "Crossover scenarios with predictor error in {1, 2}. Validated on baseline (error=2, gap=2.47%) and long-loose-itl (error=2, gap=0.54%).",
+    "evidence": ["iteration-4-h-ablation"],
+    "contradicts": [],
+    "extraction_iteration": 4,
+    "mechanism": "predictor_naive returns M_est directly without probing the ±2 window. For baseline: M_est=38, M*=40, f(38)=2.1133 vs f(40)=2.1668, gap=(2.1668-2.1133)/2.1668=2.47%. For long-loose-itl: M_est=91, M*=93, f(91)=1.4736 vs f(93)=1.4816, gap=0.54%. The steeper gap for baseline vs long-loose-itl reflects a higher local slope at M=38 in the rising portion.",
+    "applicability_bounds": "Only affects crossover scenarios. No-crossover scenarios (short-tight-ttft) and zero-error predictions (small-queue) are unaffected by removing refinement. The 2.47% worst-case gap is bounded by predictor error (≤2) and the local slope — both bounded by the scenario parameters.",
+    "superseded_by": null,
+    "category": "algorithm",
+    "status": "active"
+  },
+  {
+    "id": "RP-11",
+    "statement": "The predictor-guided hybrid strategy achieves gap_throughput_rel<0.002% in at most 5 total oracle calls (including 1 harness confirmatory) for all 4 scenarios, representing a 44% reduction from the 9 calls required by full-range ratio binary search. The key mechanism: M_est anchors serve dual purpose as both scenario-identification and binary-search probes, eliminating identification overhead.",
+    "confidence": "high",
+    "regime": "All 4 scenarios across both predictor_direct (±2) and predictor_hybrid (±5) implementations",
+    "evidence": ["iteration-4-h-main", "iteration-4-h-robustness", "iteration-3 (original)"],
+    "contradicts": [],
+    "extraction_iteration": 4,
+    "mechanism": "Both predictor_direct and predictor_hybrid achieve worst-case 5 calls. predictor_direct uses ±2 sequential probing; predictor_hybrid uses ±5 binary search. The tight trust of ±2 saves 0.5 mean calls (4.25 vs 4.75) without affecting worst-case. The original RP-11 claim of 5-call bound is confirmed by both variants.",
+    "applicability_bounds": "Updated: applies to both predictor_direct (±2) and predictor_hybrid (±5). The 5-call worst-case bound holds for both. The distinction is in mean calls (4.25 vs 4.75) and robustness to predictor calibration errors beyond ±2.",
+    "superseded_by": null,
+    "category": "algorithm",
+    "status": "active"
+  }
+]

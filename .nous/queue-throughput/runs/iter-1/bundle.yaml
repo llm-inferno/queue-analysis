@@ -1,0 +1,26 @@
+metadata:
+  iteration: 1
+  family: "f-curve-shape-characterization"
+  research_question: "What are the structural properties of f(M) = max-RPS-meeting-targets as a function of MaxBatchSize M? Specifically: is f unimodal, what causes the peak, how flat is the post-peak plateau, and is the rising portion concave?"
+
+# Arms chosen:
+# - h-main: Tests the core structural claim (two-phase: concave rise + flat plateau with binding crossover)
+# - h-control-negative: Tests a scenario where one constraint never binds, confirming the mechanism
+# - h-robustness: Tests whether the two-phase structure holds across all 4 scenarios
+# No ablation or super-additivity arms — this is observe-mode characterization, not intervention.
+
+arms:
+  - type: h-main
+    prediction: "For the baseline scenario, f(M) exhibits a two-phase structure: (1) a concave monotone rise from M=2 to M*=40 where the first difference df/dM decreases steadily after M≈8, followed by (2) a flat plateau for M>40 with total variation < 0.05% of f*. The peak M*=40 coincides exactly with the crossover point where RPSTargetTTFT first exceeds RPSTargetITL — below M*, TTFT is the binding constraint; above M*, ITL binds."
+    mechanism: "The /target endpoint returns throughput = min(RPSTargetTTFT, RPSTargetITL). RPSTargetTTFT increases with M because larger batches amortize queueing delay relative to the TTFT target. RPSTargetITL decreases slightly with M because larger batches increase per-iteration time (the decode step scales linearly with batch size via gamma*tokens_memory). The throughput peak occurs where these two curves cross. Above the crossover, ITL becomes the binding constraint and its rate decreases only very slowly (the gamma*M term grows slowly relative to the alpha constant), producing the flat plateau. Source: pkg/analyzer/queueanalyzer.go:242 (min selection), :263-281 (IterationTime/PrefillTime/DecodeTime showing linear M dependence)."
+    diagnostic: "If the prediction is wrong — e.g., f is not monotone on the left, or the plateau shows significant decay, or the crossover doesn't coincide with M* — examine: (a) whether the binary search in Size() introduces discretization artifacts, (b) whether the queueing model's state-dependent service rates create non-monotonic behavior at certain M values, (c) whether the finite queue (MaxQueueSize=128) introduces blocking effects that distort the shape."
+
+  - type: h-control-negative
+    prediction: "For the short-tight-ttft scenario (AvgIn=128, AvgOut=256, ITL=20, TTFT=35), RPSTargetITL remains strictly above RPSTargetTTFT for ALL M in [2, 256] — the ITL constraint never binds. Consequently, f(M) has no sharp peak; instead it rises concavely and saturates to a flat asymptote by M≈30, with the nominal M*=69 being indistinguishable from noise (< 0.004% above M=34's value)."
+    mechanism: "With AvgOutputTokens=256 (half of baseline) and the same targetITL=20ms, the ITL headroom is enormous — RPSTargetITL exceeds 5 req/s while RPSTargetTTFT saturates around 2.75 req/s. The tight TTFT target (35ms vs 60ms baseline) means TTFT always dominates. Without a crossover, there is no peak — only saturation of the TTFT rate as M grows large enough that prefill/decode time dominates over queueing delay. Source: observed RPSTargetITL=7.3 vs RPSTargetTTFT=2.75 at M=69."
+    diagnostic: "If ITL ever binds for some M in this scenario, it would indicate the decode-time scaling with M is faster than expected. Check pkg/analyzer/queueanalyzer.go:278 (DecodeTime formula) and whether gamma*M eventually dominates."
+
+  - type: h-robustness
+    prediction: "All 4 scenarios exhibit the same two-phase structure (concave rise then flat plateau), with: (a) plateau variation < 0.15% of f* in every scenario, (b) the rising portion is monotone (violations < 0.01% of peak), (c) the transition from 90% to 99% of peak spans 4-21 M-steps depending on the scenario. The long-loose-itl scenario has the widest transition (≈21 steps) because its larger AvgOutputTokens creates a slower rise rate."
+    mechanism: "The two-phase structure is universal because it arises from the min(TTFT-rate, ITL-rate) architecture of the /target endpoint. Every scenario eventually saturates when one constraint's rate stops growing with M (TTFT saturates because queueing delay vanishes relative to service time; ITL saturates because decode time's M-dependence is weak). The transition width correlates with AvgOutputTokens because decode-time = AvgOutputTokens * DecodeTime(M) dominates total service time, slowing the rate at which increased M improves TTFT."
+    diagnostic: "If a scenario violates the two-phase structure (e.g., shows non-monotone behavior exceeding noise, or plateau variation > 0.15%), investigate whether maxQueueSize creates blocking at high load (relevant for small-queue with maxQueueSize=4) or whether the numerical solver's precision degrades at extreme M values."

@@ -1,0 +1,11 @@
+{
+  "gate_type": "design",
+  "summary": "We are testing whether the crossover point M* (the MaxBatchSize where the binding constraint switches from TTFT to ITL) can be predicted from input parameters alone using a closed-form formula M_est = round(n_ITL + 3.0*sqrt(n_ITL) + 0.05*wait_budget), without needing to call the queue solver iteratively. This would reduce the number of solver calls needed to find optimal throughput from 9 (full binary search) to 5 (narrow search around the prediction).",
+  "key_points": [
+    "Main hypothesis (h-main): The predictor achieves |M_est - M*| <= 5 (expected <= 2) across all crossover scenarios (baseline, long-loose-itl, small-queue). Confirmation: max error <= 5. Refutation: any scenario exceeds error of 5, indicating the sqrt-based stochastic headroom model or the linear DecodeTime approximation breaks down.",
+    "Ablation (h-ablation): Removing the 0.05*wait_budget term should degrade accuracy for long-loose-itl (large wait budget ~107ms) by 4+ units while leaving other scenarios unaffected. This isolates the contribution of queueing delay headroom to the crossover location.",
+    "Negative control (h-control-negative): For short-tight-ttft, the formula computes wait_budget < 0 (~-11.3ms), correctly classifying it as a no-crossover scenario. This validates that sign(wait_budget) perfectly separates crossover from no-crossover cases across all 4 test scenarios.",
+    "Robustness (h-robustness): A hybrid strategy using M_est \u00b1 5 as a narrow binary search window should find exact M* in <= 5 solver calls total \u2014 a 44% reduction from the 9-call full-range search. Code changes: create predictor_hybrid.py strategy that computes M_est from scenario parameters, then searches the narrow window for the R(M)=1.0 crossing.",
+    "Key diagnostic: If errors exceed 5, check whether average occupancy at crossover deviates from n_ITL (linear model breakdown) or whether the 3.0 coefficient on sqrt(n_ITL) needs to be scenario-dependent."
+  ]
+}

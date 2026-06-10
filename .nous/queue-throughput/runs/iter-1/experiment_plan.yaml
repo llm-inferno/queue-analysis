@@ -1,0 +1,81 @@
+metadata:
+  iteration: 1
+  bundle_ref: "runs/iter-1/bundle.yaml"
+
+setup:
+  - cmd: "go build -o /tmp/queue-analysis ."
+    description: "Build the Go server (from repo root)"
+  - cmd: "source nous/.venv/bin/activate && python -m nous.harness.run --scenarios nous/scenarios.json --strategy nous/harness/strategies/example_linear_scan.py --m-min 35 --m-max 45 --out .nous/queue-throughput/runs/iter-1/results/baseline_smoke.json"
+    description: "Validate baseline harness: expect M=40, calls=12, gap=0.0"
+
+arms:
+  - arm_id: "h-main"
+    conditions:
+      - name: "baseline-shape-from-cache"
+        description: "Analyze truth-baseline.json f_curve for monotonicity, plateau, concavity"
+        cmd: >
+          python3 -c "
+          import json
+          with open('nous/cache/truth-baseline.json') as f: d=json.load(f)
+          curve=d['f_curve']; feasible=[(e['m'],e['throughput']) for e in curve if e['throughput']>0]
+          M_truth=d['M_truth']; peak_tp=d['throughput_truth']
+          rising=[(m,tp) for m,tp in feasible if m<=M_truth]
+          plateau=[(m,tp) for m,tp in feasible if m>M_truth]
+          viol=sum(1 for i in range(1,len(rising)) if rising[i][1]<rising[i-1][1])
+          pvar=(max(tp for _,tp in plateau)-min(tp for _,tp in plateau))/peak_tp*100
+          print(f'violations={viol}, plateau_var={pvar:.5f}%')
+          "
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-1/results/h-main/baseline_shape.json"
+
+      - name: "baseline-binding-crossover-probe"
+        description: "Live oracle: probe M=5,10,20,30,35,38,39,40,41,45,50,80,256 to identify TTFT/ITL crossover"
+        cmd: >
+          for M in 5 10 20 30 35 38 39 40 41 45 50 80 256; do
+            curl -s -X POST http://localhost:8080/target \
+              -H 'Content-Type: application/json' \
+              -d "{\"MaxBatchSize\":$M,\"AvgInputTokens\":256,\"AvgOutputTokens\":512,\"targetITL\":20.0,\"targetTTFT\":60.0,\"maxQueueSize\":128,\"alpha\":12.0,\"beta\":0.05,\"gamma\":0.0005}"
+          done
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-1/results/h-main/baseline_shape.json"
+
+  - arm_id: "h-control-negative"
+    conditions:
+      - name: "sttft-shape-from-cache"
+        description: "Analyze truth-short-tight-ttft.json f_curve; check M=34 vs M=69 gap"
+        cmd: >
+          python3 -c "
+          import json
+          with open('nous/cache/truth-short-tight-ttft.json') as f: d=json.load(f)
+          c={e['m']:e['throughput'] for e in d['f_curve']}
+          print(f'M=34: {c[34]:.7f}, M=69: {c[69]:.7f}, gap={(c[69]-c[34])/c[69]*100:.6f}%')
+          "
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-1/results/h-control-negative/sttft_shape.json"
+
+      - name: "sttft-binding-probe"
+        description: "Live oracle: probe M=10,30,69,150,256 to confirm TTFT always binds"
+        cmd: >
+          for M in 10 30 69 150 256; do
+            curl -s -X POST http://localhost:8080/target \
+              -H 'Content-Type: application/json' \
+              -d "{\"MaxBatchSize\":$M,\"AvgInputTokens\":128,\"AvgOutputTokens\":256,\"targetITL\":20.0,\"targetTTFT\":35.0,\"maxQueueSize\":128,\"alpha\":12.0,\"beta\":0.05,\"gamma\":0.0005}"
+          done
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-1/results/h-control-negative/sttft_shape.json"
+
+  - arm_id: "h-robustness"
+    conditions:
+      - name: "all-scenarios-shape-from-cache"
+        description: "Analyze all 4 truth caches for plateau_var, monotonicity, transition_width"
+        cmd: >
+          python3 -c "
+          import json
+          for sc in ['baseline','short-tight-ttft','long-loose-itl','small-queue']:
+            with open(f'nous/cache/truth-{sc}.json') as f: d=json.load(f)
+            cur=d['f_curve']; M*=d['M_truth']; tp*=d['throughput_truth']
+            rising=[(e['m'],e['throughput']) for e in cur if e['throughput']>0 and e['m']<=M*]
+            plateau=[(e['m'],e['throughput']) for e in cur if e['throughput']>0 and e['m']>M*]
+            pvar=(max(t for _,t in plateau)-min(t for _,t in plateau))/tp*100
+            viol=sum(1 for i in range(1,len(rising)) if rising[i][1]<rising[i-1][1])
+            m90=next((m for m,t in rising if t>=0.90*tp),None)
+            m99=next((m for m,t in rising if t>=0.99*tp),None)
+            print(f'{sc}: pvar={pvar:.4f}%, viol={viol}, tw={m99-m90 if m90 and m99 else None}')
+          "
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-1/results/h-robustness/cross_scenario_shape.json"

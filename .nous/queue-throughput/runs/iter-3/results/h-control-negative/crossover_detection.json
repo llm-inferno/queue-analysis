@@ -1,0 +1,182 @@
+{
+  "mode": "full_predictor",
+  "formula": "M_est = round(n_ITL + 3.0*sqrt(n_ITL) + 0.05*wait_budget)",
+  "results": [
+    {
+      "scenario": "baseline",
+      "M_truth": 40,
+      "M_est": 38,
+      "has_crossover_predicted": true,
+      "n_ITL": 23.2542,
+      "wait_budget_ms": 7.3782,
+      "error_abs": 2,
+      "within_5": true,
+      "wait_budget_coeff": 0.05,
+      "components": {
+        "tc": 1.4971,
+        "tm": 512.0,
+        "d_slope": 0.3309,
+        "d_intercept": 12.3063,
+        "PT_n_ITL": 32.6218,
+        "sqrt_n_ITL": 4.8223,
+        "base_term": 23.2542,
+        "buffer_term": 14.4668,
+        "wait_term": 0.3689
+      }
+    },
+    {
+      "scenario": "short-tight-ttft",
+      "M_truth": 69,
+      "M_est": null,
+      "has_crossover_predicted": false,
+      "n_ITL": 38.5863,
+      "wait_budget_ms": -11.2858,
+      "error_abs": null,
+      "within_5": false,
+      "wait_budget_coeff": 0.05,
+      "components": {
+        "tc": 1.4942,
+        "tm": 256.0,
+        "d_slope": 0.2027,
+        "d_intercept": 12.1783,
+        "PT_n_ITL": 26.2858
+      }
+    },
+    {
+      "scenario": "long-loose-itl",
+      "M_truth": 93,
+      "M_est": 91,
+      "has_crossover_predicted": true,
+      "n_ITL": 61.7458,
+      "wait_budget_ms": 107.5062,
+      "error_abs": 2,
+      "within_5": true,
+      "wait_budget_coeff": 0.05,
+      "components": {
+        "tc": 1.2488,
+        "tm": 768.0,
+        "d_slope": 0.4464,
+        "d_intercept": 12.4343,
+        "PT_n_ITL": 52.4938,
+        "sqrt_n_ITL": 7.8579,
+        "base_term": 61.7458,
+        "buffer_term": 23.5736,
+        "wait_term": 5.3753
+      }
+    },
+    {
+      "scenario": "small-queue",
+      "M_truth": 38,
+      "M_est": 38,
+      "has_crossover_predicted": true,
+      "n_ITL": 23.2542,
+      "wait_budget_ms": 7.3782,
+      "error_abs": 0,
+      "within_5": true,
+      "wait_budget_coeff": 0.05,
+      "components": {
+        "tc": 1.4971,
+        "tm": 512.0,
+        "d_slope": 0.3309,
+        "d_intercept": 12.3063,
+        "PT_n_ITL": 32.6218,
+        "sqrt_n_ITL": 4.8223,
+        "base_term": 23.2542,
+        "buffer_term": 14.4668,
+        "wait_term": 0.3689
+      }
+    }
+  ],
+  "summary": {
+    "crossover_scenarios": [
+      {
+        "scenario": "baseline",
+        "M_truth": 40,
+        "M_est": 38,
+        "has_crossover_predicted": true,
+        "n_ITL": 23.2542,
+        "wait_budget_ms": 7.3782,
+        "error_abs": 2,
+        "within_5": true,
+        "wait_budget_coeff": 0.05,
+        "components": {
+          "tc": 1.4971,
+          "tm": 512.0,
+          "d_slope": 0.3309,
+          "d_intercept": 12.3063,
+          "PT_n_ITL": 32.6218,
+          "sqrt_n_ITL": 4.8223,
+          "base_term": 23.2542,
+          "buffer_term": 14.4668,
+          "wait_term": 0.3689
+        }
+      },
+      {
+        "scenario": "long-loose-itl",
+        "M_truth": 93,
+        "M_est": 91,
+        "has_crossover_predicted": true,
+        "n_ITL": 61.7458,
+        "wait_budget_ms": 107.5062,
+        "error_abs": 2,
+        "within_5": true,
+        "wait_budget_coeff": 0.05,
+        "components": {
+          "tc": 1.2488,
+          "tm": 768.0,
+          "d_slope": 0.4464,
+          "d_intercept": 12.4343,
+          "PT_n_ITL": 52.4938,
+          "sqrt_n_ITL": 7.8579,
+          "base_term": 61.7458,
+          "buffer_term": 23.5736,
+          "wait_term": 5.3753
+        }
+      },
+      {
+        "scenario": "small-queue",
+        "M_truth": 38,
+        "M_est": 38,
+        "has_crossover_predicted": true,
+        "n_ITL": 23.2542,
+        "wait_budget_ms": 7.3782,
+        "error_abs": 0,
+        "within_5": true,
+        "wait_budget_coeff": 0.05,
+        "components": {
+          "tc": 1.4971,
+          "tm": 512.0,
+          "d_slope": 0.3309,
+          "d_intercept": 12.3063,
+          "PT_n_ITL": 32.6218,
+          "sqrt_n_ITL": 4.8223,
+          "base_term": 23.2542,
+          "buffer_term": 14.4668,
+          "wait_term": 0.3689
+        }
+      }
+    ],
+    "no_crossover_scenarios": [
+      {
+        "scenario": "short-tight-ttft",
+        "M_truth": 69,
+        "M_est": null,
+        "has_crossover_predicted": false,
+        "n_ITL": 38.5863,
+        "wait_budget_ms": -11.2858,
+        "error_abs": null,
+        "within_5": false,
+        "wait_budget_coeff": 0.05,
+        "components": {
+          "tc": 1.4942,
+          "tm": 256.0,
+          "d_slope": 0.2027,
+          "d_intercept": 12.1783,
+          "PT_n_ITL": 26.2858
+        }
+      }
+    ],
+    "max_error": 2,
+    "all_within_5": true
+  }
+}

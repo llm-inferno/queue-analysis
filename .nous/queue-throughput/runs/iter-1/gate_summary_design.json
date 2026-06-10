@@ -1,0 +1,11 @@
+{
+  "gate_type": "design",
+  "summary": "We are characterizing the shape of f(M) = maximum RPS meeting latency targets as a function of MaxBatchSize M, to determine whether the /target endpoint produces a universal two-phase curve (concave rise then flat plateau) driven by the crossover of TTFT and ITL constraints. This is an observational study (no code changes) that sweeps M across [2, 256] for multiple parameter scenarios and measures the resulting throughput curve.",
+  "key_points": [
+    "h-main predicts a concave rise to M*\u224840 then a flat plateau (<0.05% variation) for the baseline scenario, with the peak coinciding exactly with the TTFT\u2192ITL binding-constraint crossover point.",
+    "h-control-negative predicts a scenario (short inputs, tight TTFT) where ITL never binds, so f(M) has no sharp peak\u2014just concave saturation\u2014confirming the crossover mechanism is necessary for peak formation.",
+    "h-robustness predicts all 4 scenarios share the two-phase structure with plateau variation <0.15% and monotone rising portions, differing only in transition width (4\u201321 M-steps).",
+    "Confirmation requires: (1) computing f(M) for M=2..256 in 1-step increments via the /target endpoint, (2) separately extracting RPSTargetTTFT and RPSTargetITL at each M to verify the crossover, (3) checking concavity via decreasing first-differences after M\u22488.",
+    "Refutation signals: non-monotone f(M) exceeding 0.01% of peak, plateau variation >0.15%, or crossover M* not matching the peak\u2014any of which would indicate discretization artifacts, state-dependent queueing effects, or finite-queue blocking distorting the expected smooth shape."
+  ]
+}

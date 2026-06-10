@@ -1,0 +1,33 @@
+metadata:
+  iteration: 5
+  bundle_ref: "runs/iter-5/bundle.yaml"
+  description: "Adaptive interpolation search vs ratio binary search — scenario-agnostic call-count minimization"
+
+setup:
+  - cmd: "go build -o /tmp/queue-analysis ."
+    description: "Build the Go server from repo root"
+
+arms:
+  - arm_id: "h-main"
+    conditions:
+      - name: "adaptive_interpolation"
+        cmd: "source nous/.venv/bin/activate && python -m nous.harness.run --scenarios nous/scenarios.json --strategy nous/harness/strategies/adaptive_interpolation.py --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-5/results/h_main.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-5/results/h_main.json"
+
+  - arm_id: "h-control-negative"
+    conditions:
+      - name: "ratio_binary_search"
+        cmd: "source nous/.venv/bin/activate && python -m nous.harness.run --scenarios nous/scenarios.json --strategy nous/harness/strategies/ratio_binary_search.py --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-5/results/h_control_negative.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-5/results/h_control_negative.json"
+
+  - arm_id: "h-ablation"
+    conditions:
+      - name: "adaptive_binary"
+        cmd: "source nous/.venv/bin/activate && python -m nous.harness.run --scenarios nous/scenarios.json --strategy nous/harness/strategies/adaptive_binary.py --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-5/results/h_ablation.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-5/results/h_ablation.json"
+
+  - arm_id: "h-robustness"
+    conditions:
+      - name: "adaptive_interpolation_m512"
+        cmd: "source nous/.venv/bin/activate && python -m nous.harness.run --scenarios nous/scenarios.json --strategy nous/harness/strategies/adaptive_interpolation.py --m-max 512 --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-5/results/h_robustness.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput/runs/iter-5/results/h_robustness.json"

@@ -1,0 +1,38 @@
+[
+  {
+    "scenario": "baseline",
+    "M_truth": 40,
+    "ratio_at_crossover": 0.4595501571503437,
+    "normal_concavity_ratios": {
+      "min": 0.9722382849594536,
+      "max": 0.9732868237854624,
+      "mean": 0.9728627189866297
+    },
+    "crossover_detectable": true,
+    "separation": 0.51268812780911
+  },
+  {
+    "scenario": "long-loose-itl",
+    "M_truth": 93,
+    "ratio_at_crossover": 0.5387266985056135,
+    "normal_concavity_ratios": {
+      "min": 0.9829406189744574,
+      "max": 0.9844225136652566,
+      "mean": 0.9837086156883359
+    },
+    "crossover_detectable": true,
+    "separation": 0.4442139204688439
+  },
+  {
+    "scenario": "small-queue",
+    "M_truth": 38,
+    "ratio_at_crossover": 0.29971798581567943,
+    "normal_concavity_ratios": {
+      "min": 0.9689600190385601,
+      "max": 0.9716486879838463,
+      "mean": 0.9702391500998646
+    },
+    "crossover_detectable": true,
+    "separation": 0.6692420332228807
+  }
+]

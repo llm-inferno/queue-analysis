@@ -1,0 +1,54 @@
+[
+  {
+    "scenario": "baseline",
+    "strategy": "example_linear_scan",
+    "M_chosen": 40,
+    "calls": 12,
+    "throughput_chosen": 2.1667778,
+    "M_truth": 40,
+    "throughput_truth": 2.1667778,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.019225416999688605,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "short-tight-ttft",
+    "strategy": "example_linear_scan",
+    "M_chosen": 40,
+    "calls": 12,
+    "throughput_chosen": 2.7530644,
+    "M_truth": 69,
+    "throughput_truth": 2.7530658,
+    "gap_throughput_rel": 5.085239880315376e-07,
+    "gap_M": 29,
+    "wall_clock_seconds": 0.011796458002208965,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "long-loose-itl",
+    "strategy": "example_linear_scan",
+    "M_chosen": 45,
+    "calls": 12,
+    "throughput_chosen": 1.0953504,
+    "M_truth": 93,
+    "throughput_truth": 1.4816346,
+    "gap_throughput_rel": 0.26071488881266675,
+    "gap_M": 48,
+    "wall_clock_seconds": 0.017696875002002344,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "small-queue",
+    "strategy": "example_linear_scan",
+    "M_chosen": 38,
+    "calls": 12,
+    "throughput_chosen": 2.1684475,
+    "M_truth": 38,
+    "throughput_truth": 2.1684475,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.017595667002751725,
+    "internal_solve_calls": 0
+  }
+]

@@ -1,0 +1,45 @@
+metadata:
+  iteration: 4
+  family: "predictor-algorithm-pareto"
+  research_question: "What is the minimum oracle-call budget that achieves gap_throughput_rel=0 across all scenarios, and how does the predictor+refinement combination compare to pure binary search and predictor-only approaches on the Pareto front?"
+
+arm_selection_rationale: |
+  Four arms map the Pareto front of (calls, gap):
+  - h-main: the new tight-trust algorithm (primary claim)
+  - h-control-negative: no-predictor baseline (shows what predictor buys)
+  - h-ablation: predictor without refinement (shows refinement is necessary)
+  - h-robustness: conservative variant (shows tight trust doesn't break anything)
+
+arms:
+  - type: h-main
+    prediction: "predictor_direct achieves worst-case calls ≤ 5 and gap_throughput_rel = 0 for all 4 scenarios. Specifically: baseline=4 calls, short-tight-ttft=5, long-loose-itl=5, small-queue=3. This Pareto-dominates ratio_binary_search (9 calls) with identical gap (0)."
+    mechanism: "The predictor narrows M* to a ±2 window around M_est (from RP-9's max_error=2). Sequential probing within this window finds the exact crossover in at most 2 additional calls beyond the 2 anchor probes needed for scenario identification. Total: 2 anchor + 1-2 refinement + 1 confirmatory ≤ 5. The tight trust (±2 vs ±5) saves 1 call on crossover scenarios where the bracket narrows to [last_below+1, last_below+2] instead of requiring binary search on a width-11 range."
+    diagnostic: "If calls exceed 5 for any scenario, the predictor error exceeds ±2 for that scenario — re-examine the predictor formula's coefficient stability. If gap > 0, the ratio-based crossover detection failed — check whether RPSTargetTTFT/RPSTargetITL actually crosses 1.0 at the returned M."
+    code_changes:
+      - file: "nous/harness/strategies/predictor_direct.py"
+        intent: "Implement tight-trust predictor strategy: compute M_est anchors from scenarios.json, probe anchors sequentially to identify bracket, then search ±2 from the lower anchor using ratio test R(M) >= 1.0 to find exact crossover. For no-crossover (R never reaches 1.0 within ±2 of last anchor), return m_max."
+        rationale: "Tests whether ±2 trust radius (vs ±5 in predictor_hybrid) reduces calls without introducing gap, validating the predictor's error bound from RP-9."
+
+  - type: h-control-negative
+    prediction: "ratio_binary_search requires exactly 9 calls (8 binary search steps over [2, 256] + 1 confirmatory) for all scenarios, with gap_throughput_rel = 0. This establishes the floor: without predictor assistance, O(log N) calls are necessary."
+    mechanism: "Binary search on R(M) = RPSTargetTTFT/RPSTargetITL crossing 1.0 in [2, 256]. Width 255 requires ceil(log2(255))=8 probes. For no-crossover scenarios (R never reaches 1.0), all 8 probes observe R < 1.0 and the algorithm returns m_max (plateau, gap≈0). The +1 confirmatory call is harness overhead."
+    diagnostic: "If calls ≠ 9, the binary search range is wrong (check m_min/m_max handling). If gap > 0 for crossover scenarios, the ratio doesn't actually cross 1.0 at M* — re-verify RP-2."
+    code_changes:
+      - file: "nous/harness/strategies/ratio_binary_search.py"
+        intent: "Implement full-range binary search on R(M) = RPSTargetTTFT/RPSTargetITL finding the smallest M where R >= 1.0 in [2, m_max]. Return m_max if no crossing found (no-crossover case)."
+        rationale: "Establishes the no-predictor control: demonstrates the cost of searching the full range without leveraging the closed-form predictor."
+
+  - type: h-ablation
+    prediction: "predictor_naive (anchor identification WITHOUT ±2 refinement) achieves worst-case 3 calls but gap_throughput_rel > 0 for at least 2 scenarios. Specifically: baseline gap ≈ 2.47% (M_est=38 vs M*=40), long-loose-itl gap ≈ 0.54% (M_est=91 vs M*=93). This demonstrates the ratio refinement is load-bearing: without it, the predictor's ±2 error translates directly to nonzero gap."
+    mechanism: "predictor_naive probes anchors [38, 91] to identify which M_est is active (same as predictor_direct), then returns M_est WITHOUT using the ratio to refine. When predictor error > 0 (baseline: error=2, long-loose-itl: error=2), the returned M sits below M* on the rising portion of f(M), producing gap = (f(M*) - f(M_est)) / f(M*). The gap magnitude is proportional to the local slope at M_est times the predictor error."
+    diagnostic: "If gap = 0 for all scenarios, the predictor error was 0 for all (unlikely given iter-3 measured max_error=2). If gap > predicted (>>2.5%), throughput falls off faster than expected below M* — check concavity at the crossover."
+    code_changes:
+      - file: "nous/harness/strategies/predictor_naive.py"
+        intent: "Implement predictor-only strategy: probe anchors to identify active scenario (same as predictor_direct), then return the identified M_est anchor directly without ratio-based refinement."
+        rationale: "Isolates the contribution of the ±2 ratio refinement step by removing it while keeping the predictor and scenario identification."
+
+  - type: h-robustness
+    prediction: "predictor_hybrid (existing, trust ±5) achieves worst-case 5 calls, gap = 0 for all scenarios. Mean calls = 4.75, higher than predictor_direct's mean of 4.25. Both achieve identical worst-case performance, confirming that the tight trust (±2) is safe given the validated predictor accuracy."
+    mechanism: "predictor_hybrid binary-searches a width-11 window [M_est-5, M_est+5] after anchor identification, requiring ceil(log2(11))=4 probes. predictor_direct instead does sequential probes in a width-2 window, requiring at most 2. The extra calls in predictor_hybrid are a safety margin against predictor error > 2, but since RP-9 validates max_error=2, this margin is never needed."
+    diagnostic: "If predictor_hybrid fails (gap > 0 or calls > 5), the underlying predictor or oracle behavior has changed. If predictor_direct fails but predictor_hybrid succeeds, the ±2 bound was violated — indicating the predictor needs recalibration."
+    code_changes: []

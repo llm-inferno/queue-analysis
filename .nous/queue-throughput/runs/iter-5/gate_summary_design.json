@@ -1,0 +1,10 @@
+{
+  "gate_type": "design",
+  "summary": "We are testing whether interpolation search on the continuous ratio R(M) can reduce oracle calls from 9 (pure binary) to 7 worst-case when finding the maximum batch size M* that satisfies latency targets, while maintaining zero throughput gap. This is iteration 5 in the adaptive-interpolation-search family, exploiting the near-linearity of R(M) in tight brackets to converge ~3-4x faster than bisection per step.",
+  "key_points": [
+    "Main hypothesis (adaptive_interpolation): predicts 7 worst-case calls for crossover scenarios and 3 for no-crossover, with gap_throughput_rel = 0 across all 4 scenarios \u2014 a 22% reduction from the 9-call binary baseline.",
+    "Negative control (ratio_binary_search) should produce exactly 9 calls for all scenarios; ablation (adaptive_binary, no interpolation) should produce 9 for crossover and 3 for no-crossover, isolating interpolation as the mechanism saving 2 calls on crossover scenarios.",
+    "Robustness arm doubles the search range to m_max=512 and predicts exactly +1 call (worst-case 8), confirming sub-logarithmic scaling. Refutation criteria: if worst-case exceeds 7 at m_max=256 or gap > 0, interpolation overshoots due to R curvature; if ablation matches main arm, interpolation isn't load-bearing.",
+    "Key confirmation signals: (1) adaptive_interpolation calls \u2264 7 on baseline/long-loose-itl/small-queue, (2) adaptive_binary calls = 9 on those same scenarios, (3) all arms produce gap_throughput_rel = 0, (4) robustness arm at m_max=512 adds exactly 1 call."
+  ]
+}

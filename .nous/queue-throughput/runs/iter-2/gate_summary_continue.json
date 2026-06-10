@@ -1,0 +1,11 @@
+{
+  "gate_type": "continue",
+  "summary": "Two iterations have confirmed that the optimal batch size M* can be found exactly in 9 oracle calls (vs. 256 brute-force) using binary search on the ratio R(M) = RPSTargetTTFT / RPSTargetITL crossing 1.0, and that the two-phase throughput structure is caused entirely by the min(TTFT, ITL) constraint interaction in the server's queueing model. The algorithm works for all crossover scenarios (gap = 0.0, 8 search + 1 confirmatory call) and handles the no-crossover edge case gracefully (gap = 0.0 in 10 calls).",
+  "key_points": [
+    "Binary search on R(M) finds M* exactly in 9 total calls for all three crossover scenarios (baseline M*=40, long-loose-itl M*=93, small-queue M*=38), matching ground truth with gap_throughput_rel = 0.0 in all cases. This compares favorably to linear scan (12 calls, missed long-loose-itl entirely).",
+    "The ratio R(M) is strictly monotone increasing below M* with zero violations across all crossover scenarios. At the crossover point, R flips from <1 (e.g., 0.992 at M=39) to >1 (e.g., 1.009 at M=40) \u2014 the signal is sharp and unambiguous.",
+    "Single-constraint ablation confirmed the mechanism: ITL-only yields a peak at M=24 with a 3% decay (no plateau), TTFT-only yields a monotone-then-flat curve (0.00008% variation), and only combining both constraints produces the exploitable crossover and flat plateau that makes the problem tractable.",
+    "The no-crossover scenario (short-tight-ttft, R never exceeds 0.50) is handled by a fallback that returns the highest-throughput point observed during the binary search, achieving gap = 0.0 in 10 calls by landing on the flat plateau (any M \u2265 26 achieves peak throughput for this scenario).",
+    "Still unknown: whether M* can be predicted analytically from input parameters (AvgOut, targetITL, targetTTFT, alpha, beta, gamma) without any oracle calls. The crossover condition RPSTargetTTFT(M) = RPSTargetITL(M) has a known structural form \u2014 next iteration should investigate a closed-form predictor, potentially reducing oracle calls to 1-2 confirmation probes."
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "constants": {
+    "alpha": 12.0,
+    "beta": 0.05,
+    "gamma": 0.0005
+  },
+  "search_range": {
+    "m_min": 1,
+    "m_max": 256
+  },
+  "scenarios": [
+    {
+      "name": "baseline-ttft-only",
+      "AvgInputTokens": 256,
+      "AvgOutputTokens": 512,
+      "targetITL": 9999.0,
+      "targetTTFT": 60.0,
+      "maxQueueSize": 128
+    }
+  ]
+}
