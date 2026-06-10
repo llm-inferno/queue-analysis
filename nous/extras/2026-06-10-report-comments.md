@@ -61,3 +61,13 @@ Solid 5-iteration campaign that under-shipped iter 5 and over-claims one structu
 3. Restates RP-15 as "best-observed call count" until a lower bound is shown.
 
 These are framing/scope critiques, not refutations — the empirical findings on the 4 scenarios look correct.
+
+---
+
+## Status (2026-06-10, post-PR-review)
+
+This critique was written before the PR review of #5. The follow-up review surfaced a related issue (predictor strategies leaking cross-scenario information through `scenarios.json`) and triaged everything together:
+
+- **Polish fixes** (helper dedup, docstring conventions, server SIGTERM, plateau-clamp comment, magic-number rename, mock-based unit tests for all 7 strategies) landed in commit `db76024`.
+- **Search-contract change** (which would let predictor strategies stop reading `scenarios.json` and remove the duplicated `(ALPHA, BETA, GAMMA)` constants) is tracked in **issue #6**. Deferred because it invalidates the iter-4/5 Pareto numbers and requires a re-run.
+- **Items from this doc that are still open**: the predicted 4-call hybrid (point 1 in "Net" above) and the RP-9 / RP-15 reframing (points 2–3) — to be picked up in the next campaign or a targeted follow-up. Issue #6 names the 4-call hybrid as out-of-scope-for-itself but related.
