@@ -29,7 +29,8 @@ def test_run_strategy_on_scenario_uses_oracle_and_truth(monkeypatch):
     makes one extra confirmatory eval_(m_chosen) call, so total calls == 10.
     """
     s = Scenario(name="x", avg_input_tokens=1, avg_output_tokens=1,
-                 target_itl=10.0, target_ttft=10.0, max_queue_size=10)
+                 target_itl=10.0, target_ttft=10.0, max_queue_size=10,
+                 alpha=12.0, beta=0.05, gamma=0.0005, regime="crossover")
 
     def fake_make_oracle(base_url, scenario, **kw):
         from nous.harness.oracle import OracleStats
@@ -65,7 +66,8 @@ def test_run_strategy_on_scenario_uses_oracle_and_truth(monkeypatch):
 def test_run_strategy_rejects_out_of_range_M(monkeypatch):
     """The harness must raise if a strategy returns M outside [m_min, m_max]."""
     s = Scenario(name="x", avg_input_tokens=1, avg_output_tokens=1,
-                 target_itl=10.0, target_ttft=10.0, max_queue_size=10)
+                 target_itl=10.0, target_ttft=10.0, max_queue_size=10,
+                 alpha=12.0, beta=0.05, gamma=0.0005, regime="crossover")
 
     def fake_make_oracle(base_url, scenario, **kw):
         from nous.harness.oracle import OracleStats

@@ -59,9 +59,6 @@ def run_strategy_on_scenario(
     m_max: int,
     truth: dict,
     strategy_name: str,
-    alpha: float = 12.0,
-    beta: float = 0.05,
-    gamma: float = 0.0005,
 ) -> ScenarioResult:
     """Run one strategy against one scenario; return a scored ScenarioResult.
 
@@ -71,7 +68,7 @@ def run_strategy_on_scenario(
     `result.calls` (calls = strategy_calls + 1). Strategy authors comparing
     call budgets should account for this constant overhead.
     """
-    eval_, stats = make_oracle(base_url, scenario, alpha=alpha, beta=beta, gamma=gamma)
+    eval_, stats = make_oracle(base_url, scenario)
     t0 = time.monotonic()
     m_chosen = int(search(eval_, m_min, m_max))
     if not (m_min <= m_chosen <= m_max):
@@ -125,7 +122,6 @@ def main() -> None:
                 base_url=base_url, scenario=scenario, search=search,
                 m_min=m_min, m_max=m_max, truth=truth,
                 strategy_name=strategy_name,
-                alpha=config.alpha, beta=config.beta, gamma=config.gamma,
             )
             records.append(result.to_dict())
             print(f"[{scenario.name}] M={result.M_chosen} calls={result.calls} "

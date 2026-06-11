@@ -37,9 +37,7 @@ def main() -> None:
 
     with AnalyzerServer(repo_dir=args.repo_dir, port=args.port) as base_url:
         for s in config.scenarios:
-            eval_, stats = make_oracle(
-                base_url, s, alpha=config.alpha, beta=config.beta, gamma=config.gamma,
-            )
+            eval_, stats = make_oracle(base_url, s)
             curve = []
             best_m, best_t = m_min, 0.0  # 0 matches the oracle's infeasibility convention
             for m in range(m_min, m_max + 1):

@@ -18,35 +18,18 @@ def make_oracle(
     base_url: str,
     scenario: Scenario,
     *,
-    alpha: float = 12.0,
-    beta: float = 0.05,
-    gamma: float = 0.0005,
     timeout: float = 30.0,
 ) -> tuple[Callable[[int], dict], OracleStats]:
-    """Return (target_eval, stats). The strategy must call target_eval(m).
-
-    target_eval increments stats.calls atomically per call and returns the
-    parsed AnalysisData JSON for that maxBatchSize.
-
-    Special case — HTTP 400: the analyzer returns 400 when the (M, target-set)
-    pair is infeasible (e.g., the latency target lies outside the achievable
-    region for this token profile).  target_eval returns {"throughput": 0.0}
-    and does NOT increment stats.calls, so callers can treat infeasible M
-    values as zero-throughput without burning their call budget.
-
-    All other 4xx/5xx responses propagate as requests.HTTPError.
+    """Return (target_eval, stats). target_eval(m) posts to /target using the
+    scenario's own alpha/beta/gamma. HTTP 400 -> {"throughput": 0.0}, uncounted.
     """
     stats = OracleStats()
     url = f"{base_url}/target"
 
     def target_eval(m: int) -> dict:
-        problem = scenario_to_problem(scenario, m, alpha=alpha, beta=beta, gamma=gamma)
+        problem = scenario_to_problem(scenario, m)
         resp = requests.post(url, json=problem, timeout=timeout)
         if resp.status_code == 400:
-            # /target returns 400 when the (M, target-set) pair is infeasible
-            # (e.g., the latency target is outside the achievable region). Treat
-            # this M as throughput=0 and do NOT count it against the call budget,
-            # so strategies and baseline scans can sweep without crashing.
             return {"throughput": 0.0}
         resp.raise_for_status()
         stats.calls += 1

@@ -6,6 +6,7 @@ from nous.harness.oracle import make_oracle, OracleStats
 SCENARIO = Scenario(
     name="t", avg_input_tokens=100, avg_output_tokens=200,
     target_itl=15.0, target_ttft=50.0, max_queue_size=64,
+    alpha=12.0, beta=0.05, gamma=0.0005, regime="crossover",
 )
 
 
