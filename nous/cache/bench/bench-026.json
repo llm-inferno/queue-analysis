@@ -1,0 +1,1032 @@
+{
+  "scenario": "bench-026",
+  "regime": "bench",
+  "M_truth": 150,
+  "throughput_truth": 1.5047228,
+  "f_curve": [
+    {
+      "m": 1,
+      "throughput": 0.0
+    },
+    {
+      "m": 2,
+      "throughput": 0.035836138
+    },
+    {
+      "m": 3,
+      "throughput": 0.099509425
+    },
+    {
+      "m": 4,
+      "throughput": 0.1731584
+    },
+    {
+      "m": 5,
+      "throughput": 0.24811032
+    },
+    {
+      "m": 6,
+      "throughput": 0.32080448
+    },
+    {
+      "m": 7,
+      "throughput": 0.38977978
+    },
+    {
+      "m": 8,
+      "throughput": 0.45451337
+    },
+    {
+      "m": 9,
+      "throughput": 0.51492745
+    },
+    {
+      "m": 10,
+      "throughput": 0.5711596
+    },
+    {
+      "m": 11,
+      "throughput": 0.6234445
+    },
+    {
+      "m": 12,
+      "throughput": 0.6720569
+    },
+    {
+      "m": 13,
+      "throughput": 0.7172836
+    },
+    {
+      "m": 14,
+      "throughput": 0.7593967
+    },
+    {
+      "m": 15,
+      "throughput": 0.7986594
+    },
+    {
+      "m": 16,
+      "throughput": 0.8353109
+    },
+    {
+      "m": 17,
+      "throughput": 0.8695736
+    },
+    {
+      "m": 18,
+      "throughput": 0.9016455
+    },
+    {
+      "m": 19,
+      "throughput": 0.9317146
+    },
+    {
+      "m": 20,
+      "throughput": 0.95993835
+    },
+    {
+      "m": 21,
+      "throughput": 0.9864726
+    },
+    {
+      "m": 22,
+      "throughput": 1.011446
+    },
+    {
+      "m": 23,
+      "throughput": 1.0349863
+    },
+    {
+      "m": 24,
+      "throughput": 1.0571977
+    },
+    {
+      "m": 25,
+      "throughput": 1.078185
+    },
+    {
+      "m": 26,
+      "throughput": 1.0980353
+    },
+    {
+      "m": 27,
+      "throughput": 1.1168351
+    },
+    {
+      "m": 28,
+      "throughput": 1.1346519
+    },
+    {
+      "m": 29,
+      "throughput": 1.1515596
+    },
+    {
+      "m": 30,
+      "throughput": 1.1676195
+    },
+    {
+      "m": 31,
+      "throughput": 1.1828853
+    },
+    {
+      "m": 32,
+      "throughput": 1.1974126
+    },
+    {
+      "m": 33,
+      "throughput": 1.2112463
+    },
+    {
+      "m": 34,
+      "throughput": 1.2244303
+    },
+    {
+      "m": 35,
+      "throughput": 1.2369996
+    },
+    {
+      "m": 36,
+      "throughput": 1.2490046
+    },
+    {
+      "m": 37,
+      "throughput": 1.2604662
+    },
+    {
+      "m": 38,
+      "throughput": 1.2714211
+    },
+    {
+      "m": 39,
+      "throughput": 1.2818952
+    },
+    {
+      "m": 40,
+      "throughput": 1.2919186
+    },
+    {
+      "m": 41,
+      "throughput": 1.3015143
+    },
+    {
+      "m": 42,
+      "throughput": 1.3107041
+    },
+    {
+      "m": 43,
+      "throughput": 1.3195124
+    },
+    {
+      "m": 44,
+      "throughput": 1.3279538
+    },
+    {
+      "m": 45,
+      "throughput": 1.3360503
+    },
+    {
+      "m": 46,
+      "throughput": 1.3438165
+    },
+    {
+      "m": 47,
+      "throughput": 1.3512748
+    },
+    {
+      "m": 48,
+      "throughput": 1.3584309
+    },
+    {
+      "m": 49,
+      "throughput": 1.3653034
+    },
+    {
+      "m": 50,
+      "throughput": 1.3719033
+    },
+    {
+      "m": 51,
+      "throughput": 1.3782431
+    },
+    {
+      "m": 52,
+      "throughput": 1.3843374
+    },
+    {
+      "m": 53,
+      "throughput": 1.3901919
+    },
+    {
+      "m": 54,
+      "throughput": 1.3958161
+    },
+    {
+      "m": 55,
+      "throughput": 1.4012237
+    },
+    {
+      "m": 56,
+      "throughput": 1.406419
+    },
+    {
+      "m": 57,
+      "throughput": 1.4114159
+    },
+    {
+      "m": 58,
+      "throughput": 1.4162184
+    },
+    {
+      "m": 59,
+      "throughput": 1.4208258
+    },
+    {
+      "m": 60,
+      "throughput": 1.4252545
+    },
+    {
+      "m": 61,
+      "throughput": 1.42951
+    },
+    {
+      "m": 62,
+      "throughput": 1.4335946
+    },
+    {
+      "m": 63,
+      "throughput": 1.4375241
+    },
+    {
+      "m": 64,
+      "throughput": 1.4412876
+    },
+    {
+      "m": 65,
+      "throughput": 1.4449022
+    },
+    {
+      "m": 66,
+      "throughput": 1.4483607
+    },
+    {
+      "m": 67,
+      "throughput": 1.451682
+    },
+    {
+      "m": 68,
+      "throughput": 1.4548588
+    },
+    {
+      "m": 69,
+      "throughput": 1.4579042
+    },
+    {
+      "m": 70,
+      "throughput": 1.4608101
+    },
+    {
+      "m": 71,
+      "throughput": 1.4635936
+    },
+    {
+      "m": 72,
+      "throughput": 1.4662465
+    },
+    {
+      "m": 73,
+      "throughput": 1.4687858
+    },
+    {
+      "m": 74,
+      "throughput": 1.4711909
+    },
+    {
+      "m": 75,
+      "throughput": 1.4734861
+    },
+    {
+      "m": 76,
+      "throughput": 1.4756749
+    },
+    {
+      "m": 77,
+      "throughput": 1.4777515
+    },
+    {
+      "m": 78,
+      "throughput": 1.4797244
+    },
+    {
+      "m": 79,
+      "throughput": 1.4815882
+    },
+    {
+      "m": 80,
+      "throughput": 1.483349
+    },
+    {
+      "m": 81,
+      "throughput": 1.4850069
+    },
+    {
+      "m": 82,
+      "throughput": 1.4865758
+    },
+    {
+      "m": 83,
+      "throughput": 1.4880465
+    },
+    {
+      "m": 84,
+      "throughput": 1.4894153
+    },
+    {
+      "m": 85,
+      "throughput": 1.4907192
+    },
+    {
+      "m": 86,
+      "throughput": 1.4919288
+    },
+    {
+      "m": 87,
+      "throughput": 1.4930465
+    },
+    {
+      "m": 88,
+      "throughput": 1.4941022
+    },
+    {
+      "m": 89,
+      "throughput": 1.4950796
+    },
+    {
+      "m": 90,
+      "throughput": 1.4959748
+    },
+    {
+      "m": 91,
+      "throughput": 1.4968145
+    },
+    {
+      "m": 92,
+      "throughput": 1.4975876
+    },
+    {
+      "m": 93,
+      "throughput": 1.4982905
+    },
+    {
+      "m": 94,
+      "throughput": 1.4989299
+    },
+    {
+      "m": 95,
+      "throughput": 1.4995368
+    },
+    {
+      "m": 96,
+      "throughput": 1.5000807
+    },
+    {
+      "m": 97,
+      "throughput": 1.5005552
+    },
+    {
+      "m": 98,
+      "throughput": 1.5010109
+    },
+    {
+      "m": 99,
+      "throughput": 1.5013969
+    },
+    {
+      "m": 100,
+      "throughput": 1.5017738
+    },
+    {
+      "m": 101,
+      "throughput": 1.5020947
+    },
+    {
+      "m": 102,
+      "throughput": 1.5024012
+    },
+    {
+      "m": 103,
+      "throughput": 1.5026616
+    },
+    {
+      "m": 104,
+      "throughput": 1.5028968
+    },
+    {
+      "m": 105,
+      "throughput": 1.5031062
+    },
+    {
+      "m": 106,
+      "throughput": 1.5033022
+    },
+    {
+      "m": 107,
+      "throughput": 1.5034614
+    },
+    {
+      "m": 108,
+      "throughput": 1.5036212
+    },
+    {
+      "m": 109,
+      "throughput": 1.5037555
+    },
+    {
+      "m": 110,
+      "throughput": 1.5038732
+    },
+    {
+      "m": 111,
+      "throughput": 1.5039821
+    },
+    {
+      "m": 112,
+      "throughput": 1.5040593
+    },
+    {
+      "m": 113,
+      "throughput": 1.5041443
+    },
+    {
+      "m": 114,
+      "throughput": 1.5042299
+    },
+    {
+      "m": 115,
+      "throughput": 1.5042896
+    },
+    {
+      "m": 116,
+      "throughput": 1.5043312
+    },
+    {
+      "m": 117,
+      "throughput": 1.5043836
+    },
+    {
+      "m": 118,
+      "throughput": 1.504428
+    },
+    {
+      "m": 119,
+      "throughput": 1.5044727
+    },
+    {
+      "m": 120,
+      "throughput": 1.5045061
+    },
+    {
+      "m": 121,
+      "throughput": 1.5045415
+    },
+    {
+      "m": 122,
+      "throughput": 1.5045551
+    },
+    {
+      "m": 123,
+      "throughput": 1.5045793
+    },
+    {
+      "m": 124,
+      "throughput": 1.5045953
+    },
+    {
+      "m": 125,
+      "throughput": 1.5046147
+    },
+    {
+      "m": 126,
+      "throughput": 1.5046271
+    },
+    {
+      "m": 127,
+      "throughput": 1.5046493
+    },
+    {
+      "m": 128,
+      "throughput": 1.5046384
+    },
+    {
+      "m": 129,
+      "throughput": 1.5046523
+    },
+    {
+      "m": 130,
+      "throughput": 1.5046728
+    },
+    {
+      "m": 131,
+      "throughput": 1.5046751
+    },
+    {
+      "m": 132,
+      "throughput": 1.504674
+    },
+    {
+      "m": 133,
+      "throughput": 1.5046948
+    },
+    {
+      "m": 134,
+      "throughput": 1.5046897
+    },
+    {
+      "m": 135,
+      "throughput": 1.504692
+    },
+    {
+      "m": 136,
+      "throughput": 1.504692
+    },
+    {
+      "m": 137,
+      "throughput": 1.5046989
+    },
+    {
+      "m": 138,
+      "throughput": 1.5047103
+    },
+    {
+      "m": 139,
+      "throughput": 1.5047106
+    },
+    {
+      "m": 140,
+      "throughput": 1.5047209
+    },
+    {
+      "m": 141,
+      "throughput": 1.5047113
+    },
+    {
+      "m": 142,
+      "throughput": 1.504709
+    },
+    {
+      "m": 143,
+      "throughput": 1.5047207
+    },
+    {
+      "m": 144,
+      "throughput": 1.5047014
+    },
+    {
+      "m": 145,
+      "throughput": 1.5047218
+    },
+    {
+      "m": 146,
+      "throughput": 1.5047209
+    },
+    {
+      "m": 147,
+      "throughput": 1.5047174
+    },
+    {
+      "m": 148,
+      "throughput": 1.5047224
+    },
+    {
+      "m": 149,
+      "throughput": 1.5047218
+    },
+    {
+      "m": 150,
+      "throughput": 1.5047228
+    },
+    {
+      "m": 151,
+      "throughput": 1.504721
+    },
+    {
+      "m": 152,
+      "throughput": 1.5047219
+    },
+    {
+      "m": 153,
+      "throughput": 1.5047206
+    },
+    {
+      "m": 154,
+      "throughput": 1.5047226
+    },
+    {
+      "m": 155,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 156,
+      "throughput": 1.504722
+    },
+    {
+      "m": 157,
+      "throughput": 1.5047227
+    },
+    {
+      "m": 158,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 159,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 160,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 161,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 162,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 163,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 164,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 165,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 166,
+      "throughput": 1.5047226
+    },
+    {
+      "m": 167,
+      "throughput": 1.504722
+    },
+    {
+      "m": 168,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 169,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 170,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 171,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 172,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 173,
+      "throughput": 1.504722
+    },
+    {
+      "m": 174,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 175,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 176,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 177,
+      "throughput": 1.5047219
+    },
+    {
+      "m": 178,
+      "throughput": 1.504722
+    },
+    {
+      "m": 179,
+      "throughput": 1.5047224
+    },
+    {
+      "m": 180,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 181,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 182,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 183,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 184,
+      "throughput": 1.5047219
+    },
+    {
+      "m": 185,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 186,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 187,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 188,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 189,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 190,
+      "throughput": 1.504722
+    },
+    {
+      "m": 191,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 192,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 193,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 194,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 195,
+      "throughput": 1.504722
+    },
+    {
+      "m": 196,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 197,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 198,
+      "throughput": 1.5047224
+    },
+    {
+      "m": 199,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 200,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 201,
+      "throughput": 1.5047224
+    },
+    {
+      "m": 202,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 203,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 204,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 205,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 206,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 207,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 208,
+      "throughput": 1.504722
+    },
+    {
+      "m": 209,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 210,
+      "throughput": 1.504722
+    },
+    {
+      "m": 211,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 212,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 213,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 214,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 215,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 216,
+      "throughput": 1.5047224
+    },
+    {
+      "m": 217,
+      "throughput": 1.5047219
+    },
+    {
+      "m": 218,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 219,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 220,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 221,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 222,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 223,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 224,
+      "throughput": 1.504722
+    },
+    {
+      "m": 225,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 226,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 227,
+      "throughput": 1.5047224
+    },
+    {
+      "m": 228,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 229,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 230,
+      "throughput": 1.5047224
+    },
+    {
+      "m": 231,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 232,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 233,
+      "throughput": 1.5047219
+    },
+    {
+      "m": 234,
+      "throughput": 1.5047219
+    },
+    {
+      "m": 235,
+      "throughput": 1.5047224
+    },
+    {
+      "m": 236,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 237,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 238,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 239,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 240,
+      "throughput": 1.5047219
+    },
+    {
+      "m": 241,
+      "throughput": 1.5047219
+    },
+    {
+      "m": 242,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 243,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 244,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 245,
+      "throughput": 1.5047224
+    },
+    {
+      "m": 246,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 247,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 248,
+      "throughput": 1.5047222
+    },
+    {
+      "m": 249,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 250,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 251,
+      "throughput": 1.5047221
+    },
+    {
+      "m": 252,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 253,
+      "throughput": 1.5047219
+    },
+    {
+      "m": 254,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 255,
+      "throughput": 1.5047225
+    },
+    {
+      "m": 256,
+      "throughput": 1.5047219
+    }
+  ]
+}
