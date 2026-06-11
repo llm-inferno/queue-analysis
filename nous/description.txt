@@ -14,6 +14,39 @@ pkg/service/analyzer.go). Two HTTP endpoints on :8080:
 
 Schemas: examples/problem-data.json (input), examples/solution-target.json (output).
 
+NOTE: the analyzer's service-time formula was corrected in commit 99024df (it had
+double-counted the focal request's work). Any prior NOUS findings for this system
+predate that fix and are NOT load-bearing — derive afresh from the primitives below.
+
+Analytic primitives
+
+The per-iteration mean times are closed-form in the inputs. With
+  n  = AvgInputTokens, m = AvgOutputTokens, alpha/beta/gamma the service constants,
+  B  = batch size (= the MaxBatchSize variable M),
+  nc = number of chunked-prefill iterations at B (a step function of B that depends on
+       the fixed token budget MaxNumTokens = 8192; nc = 1 until B is large enough that
+       prefill must be split into chunks):
+
+  wPrefill = (beta + gamma*(nc+1)/2) * n
+  wDecode  = beta*m + gamma*m*(n + (m+1)/2)
+  delta    = (wPrefill + wDecode) / (nc + m)
+  bg(B)    = max(0, alpha + (B-1)*delta)          # background iteration time
+
+  itl(B)     = bg(B) + beta + gamma*(n + (m+1)/2)             # mean inter-token latency
+  prefill(B) = nc*bg(B) + wPrefill                            # prefill component of TTFT
+  tau(B)     = (nc + m) * (alpha + B*delta)                   # mean service time
+
+These give per-iteration / per-request mean times. /target composes them through a
+state-dependent M/M/1 solver (queue wait is added to prefill(B) to form TTFT, and the
+solver finds the max RPS meeting both targets under the queue capacity Q = MaxQueueSize).
+
+These formulas are available as an importable module: nous/harness/formulas.py exposes
+num_iterations_per_prefill(B, params), itl(B, params), ttft_prefill(B, params),
+tau(B, params), and delta(B, params), where params is the scenario dict described under
+Harness contract. The module is parity-checked against the Go analyzer source. Import
+and use it rather than re-deriving the arithmetic — but DO show your derivation of any
+predictor in your iter-1 report so the analytic story is preserved.
+
 Problem definition
 
 For fixed inputs (alpha, beta, gamma, AvgInputTokens, AvgOutputTokens, MaxQueueSize,
@@ -21,47 +54,58 @@ TargetITL, TargetTTFT), define
 
     f(M) = throughput returned by /target when maxBatchSize = M.
 
-Find  M* = argmax_{M in [M_min, M_max]} f(M).
+Find  M* = argmax_{M in [M_min, M_max]} f(M).   Fixed: M_min = 1, M_max = 256.
 
-A single /target call evaluates f at one M. The meta-algorithm searches over M.
-Fixed for this campaign:  M_min = 1, M_max = 256.  alpha = 12, beta = 0.05,
-gamma = 0.0005 (from examples/problem-data.json).
+A single /target call evaluates f at one M. Use the analytic primitives to derive a
+predictor M-hat(params) where possible (solve each binding constraint — ITL, TTFT,
+queue — in isolation), then refine via a small number of /target calls if needed.
 
 Scenarios
 
-The properties and the algorithm must hold across these 4 named scenarios. Canonical
-JSON: nous/scenarios.json.
+Six named dev scenarios span the regimes. alpha/beta/gamma vary PER scenario (they are
+swept on the realistic ratio manifold beta ~ alpha/240, gamma ~ alpha/24000). Canonical
+JSON: nous/scenarios.json. Each scenario carries a `regime` label naming which
+constraint binds at the peak.
 
-  baseline          AvgIn=256  AvgOut=512   ITL=20  TTFT=60   QueueSize=128
-  short-tight-ttft  AvgIn=128  AvgOut=256   ITL=20  TTFT=35   QueueSize=128
-  long-loose-itl    AvgIn=256  AvgOut=1024  ITL=40  TTFT=200  QueueSize=128
-  small-queue       AvgIn=256  AvgOut=512   ITL=20  TTFT=60   QueueSize=4
+  name        regime      alpha beta    gamma     AvgIn AvgOut ITL  TTFT  Q
+  baseline    crossover   8.0   0.033   0.000333  256   1024   20   60    128
+  itl-only    itl-only    8.0   0.033   0.000333  256   4096   15   400   128
+  ttft-only   ttft-only   8.0   0.033   0.000333  1024  256    60   80    128
+  unbounded   unbounded   4.0   0.017   0.000167  64    128    200  2000  4
+  alpha-low   crossover   4.0   0.017   0.000167  256   1024   20   60    128
+  alpha-high  crossover   16.0  0.067   0.000667  256   1024   20   60    128
 
-The baseline brute-force scan (already cached in nous/cache/) revealed:
-  baseline:         M* = 40, f* = 2.17
-  short-tight-ttft: M* = 69, f* = 2.75
-  long-loose-itl:   M* = 93, f* = 1.48
-  small-queue:      M* = 38, f* = 2.17  (M* shifts by ~2 vs baseline; the queue
-                                          binds weakly)
+Regime meanings: itl-only = ITL constraint binds across the range (f plateaus once ITL
+saturates); ttft-only = TTFT binds; crossover = TTFT binds at small M and ITL at large M,
+peak at the transition; unbounded = no constraint binds in [1,256], so M* = M_max.
 
-Some boundary infeasibility was observed during the scan: M=1 fails the ITL check
-on most scenarios. The oracle handles HTTP 400 transparently — see Harness contract.
+A larger benchmark grid exists at nous/scenarios_benchmark.json (30 scenarios sampled
+over the parameter ranges, regime label "bench"). It is NOT enumerated here and is for
+the final iteration only — iters 1-4 work on the six dev scenarios above.
 
 Harness contract
 
-The harness lives at nous/harness/. Strategies (candidate algorithms) are Python
-files under nous/harness/strategies/. Every strategy exposes:
+The harness lives at nous/harness/. Strategies (candidate algorithms) are Python files
+under nous/harness/strategies/. Every strategy exposes:
 
-    def search(target_eval, m_min: int, m_max: int) -> int
+    def search(target_eval, params: dict, m_min: int, m_max: int) -> int
 
-target_eval(m) returns the parsed AnalysisData JSON for that maxBatchSize and
-counts the call. The strategy cannot bypass the wrapper.
+  target_eval(m) posts to /target for that maxBatchSize, returns the parsed response
+    dict, and counts the call. The strategy cannot bypass the wrapper.
+  params is the scenario inputs as a dict:
+    {alpha, beta, gamma, AvgInputTokens, AvgOutputTokens, targetITL, targetTTFT,
+     maxQueueSize}
+    — exactly the keys nous/harness/formulas.py consumes, so a strategy can pass params
+    straight into the primitives to compute its predictor.
 
-Infeasibility: if /target returns HTTP 400 for a particular M (the constraint set
-is unachievable at that M), the oracle returns {"throughput": 0.0} and does NOT
-count it against the call budget. Strategies should treat 0-throughput points as
-infeasible regions; reading the truth cache's f_curve before designing a strategy
-shows where these regions are for each scenario.
+Prior strategies (predictor_*.py, adaptive_*.py, ratio_binary_search.py,
+example_linear_scan.py) accept-and-ignore params; they are retained as a
+parameter-blind BASELINE cohort for the final Pareto comparison. New formula-guided
+work goes in new strategy files.
+
+Infeasibility: if /target returns HTTP 400 for a particular M, the oracle returns
+{"throughput": 0.0} and does NOT count it against the call budget. Treat 0-throughput
+points as infeasible regions.
 
 CLI:
     python -m nous.harness.run \
@@ -73,50 +117,61 @@ Outputs one record per scenario:
   M_chosen, calls, throughput_chosen, M_truth, throughput_truth,
   gap_throughput_rel, gap_M, wall_clock_seconds, internal_solve_calls.
 
-The harness ALWAYS makes one extra confirmatory eval_(m_chosen) call after the
-strategy returns, so calls = strategy_calls + 1. Strategy budgets must account
-for this constant +1.
+The harness ALWAYS makes one extra confirmatory eval_(m_chosen) call after the strategy
+returns, so calls = strategy_calls + 1. Strategy budgets must account for this +1.
 
 Pareto axes and scoring
 
   calls               number of /target calls the strategy made (lower is better).
-                      Note: a 400-response (infeasibility) does NOT count toward
-                      this budget.
+                      A 400-response (infeasibility) does NOT count toward this budget.
   gap_throughput_rel  (truth - chosen) / truth  (>= 0; lower is better; reported as
                                                  0 when truth = 0).
   gap_M               |M_chosen - M_truth|      (reported, not the primary axis;
-                                                 plateaus make a large gap_M benign)
+                                                 flat plateaus make a large gap_M benign)
 
-Aggregate across scenarios as both worst-case (max) and mean. Worst-case is the
-primary comparison. Strategy A Pareto-dominates B iff worst-case A is no worse on
-both (calls, gap_throughput_rel) and strictly better on at least one.
+Aggregate across scenarios as both worst-case (max) and mean. Worst-case is the primary
+comparison. Strategy A Pareto-dominates B iff worst-case A is no worse on both (calls,
+gap_throughput_rel) and strictly better on at least one.
 
-Truth cache: nous/cache/truth-<scenario>.json (already populated by
-nous/harness/baseline_truth.py — do NOT re-run unless scenarios.json changes).
-The truth cache also contains the full f-curve for each scenario, useful for
-property discovery in iter 1.
+Scoring compares M_chosen against per-scenario truth caches (dev:
+nous/cache/truth-<name>.json; benchmark: nous/cache/bench/<idx>.json), held by the
+harness. The truth M*/f* are not pre-disclosed in this brief — discover f(M) via your
+own /target calls and your derivation.
 
 Stage plan
 
-The campaign is staged. Stay within the current iteration's stage; reject design
-gates that drift.
+Five iterations. observe = reason + report, NO code changes. code_changes = add files
+under nous/harness/strategies/. Stay within the current iteration's stage; produce the
+listed output before advancing.
 
-  Iter 1: Single-scenario shape characterization (use baseline). Observe-mode
-          (no code_changes) — the harness already provides the f-curve in the
-          truth cache. Hypotheses about unimodality, monotonicity, peak existence.
-  Iter 2: Local shape near the peak. Concavity, plateau width. h-robustness across
-          all 4 scenarios. h-ablation across {ITL-target, TTFT-target} drivers.
-  Iter 3: Predicting M* from inputs. Closed-form predictor in {AvgOutputTokens,
-          TargetITL, TargetTTFT, beta, gamma}. Test predictor accuracy across
-          all 4 scenarios.
-  Iter 4: First algorithm justified by Stage 1 properties. code_changes adds
-          nous/harness/strategies/alg1.py implementing the algorithm. Predict
-          worst-case calls and gap_throughput_rel; verify by running run.py.
-  Iter 5: Algorithm-2 vs Algorithm-1 (Pareto comparison). code_changes adds
-          alg2.py. Compare on (worst-case calls, worst-case gap).
+  Iter 1  observe       Derive M-hat(params) closed-form from the ITL/TTFT/tau
+                        primitives. Solve each binding constraint in isolation.
+                        Output: symbolic M_ITL, M_TTFT, M_queue and a rule to combine
+                        them, with explicit assumptions. No oracle calls.
+                        Gate: closed form for >= 1 binding case, with derivation; open
+                        cases listed as "needs case analysis."
+  Iter 2  observe       Map regime structure: where in params-space does each
+                        constraint bind? Tests "are 4 groups enough?" directly.
+                        Output: regime partition (<= 5 cells) with boundary equations
+                        in params; per-cell M-hat. Pure analysis on the symbolic forms.
+  Iter 3  observe       Validate M-hat against /target on the six dev scenarios.
+                        Oracle calls allowed here (validation, NOT counted against any
+                        algorithm budget). Output: per-scenario error table
+                        gap_M = |M-hat - M_truth|, gap_f = (f_truth - f_Mhat)/f_truth.
+                        Gate: worst-case gap_f <= 20% on >= 4/6 scenarios. Decide:
+                        predictor alone, or predictor + search refinement.
+  Iter 4  code_changes  Implement formula-guided search: M-hat -> bracket -> small
+                        /target refinement. Add formula_guided.py and a parameter-blind
+                        baseline naive_ternary.py. Gate: predicted worst-case calls <= 8
+                        and gap_f <= 5% on the dev set.
+  Iter 5  code_changes  Run on the benchmark grid (nous/scenarios_benchmark.json).
+                        Pareto-compare formula_guided vs naive_ternary vs the prior
+                        baseline cohort. Per-regime breakdown (regime field x worst
+                        calls, worst gap). Honest comparison report.
 
 Out of scope
 
-  - Changes to the Go analyzer code (only nous/harness/* and nous/strategies/*).
-  - Sweeping alpha/beta/gamma or adding scenarios beyond the 4 named.
-  - Online/streaming variants of the algorithm.
+  - Changes to the Go analyzer code or the /solve / /target endpoints (only
+    nous/harness/* and nous/harness/strategies/*).
+  - Online / streaming variants of the algorithm.
+  - Iter-4 strategies stay as single Python files under nous/harness/strategies/.
