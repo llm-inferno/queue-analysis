@@ -58,19 +58,32 @@ After each iteration, check its gate (spec §8.1) before continuing:
 
 Inspect and continue:
 
+`--max-iterations` is a **total ceiling**, not "run N more." A DONE campaign advances to
+`completed + 1` only if `completed < max_iterations`. So to gate one iteration at a time,
+**bump the ceiling by 1 on each resume**:
+
 ```bash
 nous status queue-throughput-formulas                  # sanity (status takes the run_id)
-nous resume nous/campaign.yaml --max-iterations 1      # next iteration (resume/run take the campaign.yaml PATH)
-# ... review its gate, resume again ... through iter 5
+nous resume nous/campaign.yaml --max-iterations 2      # runs iteration 2, then stops at the cap
+# review iter-2 gate ...
+nous resume nous/campaign.yaml --max-iterations 3      # iteration 3
+nous resume nous/campaign.yaml --max-iterations 4      # iteration 4
+nous resume nous/campaign.yaml --max-iterations 5      # iteration 5
 nous report queue-throughput-formulas                  # rolled-up report (takes the run_id)
 ```
 
-> **CLI gotcha:** `status` / `report` take the **run_id** (`queue-throughput-formulas`), but
-> `run` / `resume` take a **campaign.yaml path**. Passing the run_id to `resume` errors with
-> "resume requires campaign.yaml". `resume nous/campaign.yaml` reads `run_id`+`repo_path` from
-> the file to locate the existing `.nous/<run_id>/` work dir, then continues it (it does NOT
-> start a new run). Editing `nous/campaign.yaml` between iterations DOES take effect on the next
-> resume (resume loads the file you pass), unlike a fresh `run` which froze its own copy at init.
+(iter 1 was the initial `nous run ... --max-iterations 1`. If you'd rather not gate, omit
+`--max-iterations` and it runs straight to the campaign's `max_iterations: 5`.)
+
+> **CLI gotchas:**
+> - `status` / `report` take the **run_id** (`queue-throughput-formulas`); `run` / `resume`
+>   take a **campaign.yaml path**. Passing the run_id to `resume` errors "resume requires campaign.yaml".
+> - `resume nous/campaign.yaml` reads `run_id`+`repo_path` from the file to locate the existing
+>   `.nous/<run_id>/` work dir and continues it (does NOT start a new run). Editing
+>   `nous/campaign.yaml` between iterations DOES take effect on the next resume (it loads the file
+>   you pass), unlike a fresh `run` which froze its own copy at init.
+> - `--max-iterations N` caps the **total** iteration count. Re-running with the same N as a
+>   completed campaign is a no-op ("iteration N already complete"). Raise N to advance.
 
 ## Cautions
 
