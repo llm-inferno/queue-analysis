@@ -1,18 +1,10 @@
 research_question: >
-  Find structural properties of f(M) = max-RPS-meeting-targets as a function of
-  MaxBatchSize M, then design an algorithm that finds argmax_M f with few /target
-  calls. Treat /target as the black-box oracle. Score on two axes: (a) number of
-  /target calls, (b) gap_throughput_rel = (truth - chosen) / truth. Pareto compare.
+  Given the analytic primitives ITL(B), TTFT components, and tau(B) for a vLLM-style
+  inference server, derive M-hat(params) = argmax_M f(M) and design a formula-guided
+  search that pinpoints argmax_M f via few /target calls. Score on (calls,
+  gap_throughput_rel); see nous/description.txt for the full brief.
 
-  Stage plan: iter 1-3 discover properties (unimodality, local concavity / plateau,
-  closed-form predictor for M* from inputs); iter 4-5 propose and compare algorithms
-  in nous/harness/strategies/. Use the harness in nous/harness/run.py — strategies
-  must implement search(target_eval, m_min, m_max) -> int; the harness counts calls.
-
-  For the full brief — scenarios, harness contract, Pareto axes, scoring rules,
-  stage-by-stage iteration plan — read nous/description.txt in this repository.
-
-run_id: queue-throughput
+run_id: queue-throughput-formulas
 
 max_iterations: 5
 
