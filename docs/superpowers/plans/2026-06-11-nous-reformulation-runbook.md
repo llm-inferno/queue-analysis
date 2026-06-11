@@ -59,11 +59,18 @@ After each iteration, check its gate (spec §8.1) before continuing:
 Inspect and continue:
 
 ```bash
-nous status queue-throughput-formulas                       # sanity
-nous resume queue-throughput-formulas --max-iterations 1    # next iteration
+nous status queue-throughput-formulas                  # sanity (status takes the run_id)
+nous resume nous/campaign.yaml --max-iterations 1      # next iteration (resume/run take the campaign.yaml PATH)
 # ... review its gate, resume again ... through iter 5
-nous report queue-throughput-formulas                       # rolled-up report
+nous report queue-throughput-formulas                  # rolled-up report (takes the run_id)
 ```
+
+> **CLI gotcha:** `status` / `report` take the **run_id** (`queue-throughput-formulas`), but
+> `run` / `resume` take a **campaign.yaml path**. Passing the run_id to `resume` errors with
+> "resume requires campaign.yaml". `resume nous/campaign.yaml` reads `run_id`+`repo_path` from
+> the file to locate the existing `.nous/<run_id>/` work dir, then continues it (it does NOT
+> start a new run). Editing `nous/campaign.yaml` between iterations DOES take effect on the next
+> resume (resume loads the file you pass), unlike a fresh `run` which froze its own copy at init.
 
 ## Cautions
 
