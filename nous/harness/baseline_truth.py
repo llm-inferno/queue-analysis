@@ -58,7 +58,8 @@ def main() -> None:
             }
             target = (out_dir / f"{s.name}.json") if args.out_subdir else (out_dir / f"truth-{s.name}.json")
             target.write_text(json.dumps(payload, indent=2))
-            print(f"[{s.name}] M*={best_m} f*={best_t:.4f}  (calls={stats.calls})")
+            warn = "  WARNING: f(M)=0 for all M — fully infeasible (every M returned 400)" if best_t <= 0.0 else ""
+            print(f"[{s.name}] M*={best_m} f*={best_t:.4f}  (calls={stats.calls}){warn}")
 
 
 if __name__ == "__main__":
