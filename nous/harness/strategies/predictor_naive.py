@@ -25,7 +25,7 @@ from ._common import predict_m_est, ratio
 SCENARIOS_JSON = Path(__file__).resolve().parents[2] / "scenarios.json"
 
 
-def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
+def search(target_eval: Callable[[int], dict], params: dict, m_min: int, m_max: int) -> int:
     config = json.loads(SCENARIOS_JSON.read_text())
     m_est_anchors: list[int] = []
     for s in config.get("scenarios", []):

@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Callable
 
 from nous.harness.oracle import make_oracle
-from nous.harness.scenarios import Scenario, load_campaign
+from nous.harness.scenarios import Scenario, load_campaign, scenario_to_params
 from nous.harness.scoring import ScenarioResult, compute_gap
 from nous.harness.server import AnalyzerServer
 
@@ -28,7 +28,7 @@ from nous.harness.server import AnalyzerServer
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def load_strategy(path: str | Path) -> Callable[[Callable[[int], dict], int, int], int]:
+def load_strategy(path: str | Path) -> Callable[[Callable[[int], dict], dict, int, int], int]:
     """Import a Python file by path and return its `search` callable."""
     path = Path(path).resolve()
     spec = importlib.util.spec_from_file_location(f"strategy_{path.stem}", path)
@@ -37,7 +37,7 @@ def load_strategy(path: str | Path) -> Callable[[Callable[[int], dict], int, int
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     if not hasattr(module, "search"):
-        raise AttributeError(f"{path} must define a top-level `search(target_eval, m_min, m_max) -> int`")
+        raise AttributeError(f"{path} must define `search(target_eval, params, m_min, m_max) -> int`")
     return module.search
 
 
@@ -54,7 +54,7 @@ def run_strategy_on_scenario(
     *,
     base_url: str,
     scenario: Scenario,
-    search: Callable[[Callable[[int], dict], int, int], int],
+    search: Callable[[Callable[[int], dict], dict, int, int], int],
     m_min: int,
     m_max: int,
     truth: dict,
@@ -69,8 +69,9 @@ def run_strategy_on_scenario(
     call budgets should account for this constant overhead.
     """
     eval_, stats = make_oracle(base_url, scenario)
+    params = scenario_to_params(scenario)
     t0 = time.monotonic()
-    m_chosen = int(search(eval_, m_min, m_max))
+    m_chosen = int(search(eval_, params, m_min, m_max))
     if not (m_min <= m_chosen <= m_max):
         raise ValueError(f"strategy returned M={m_chosen} outside [{m_min}, {m_max}]")
     elapsed = time.monotonic() - t0
