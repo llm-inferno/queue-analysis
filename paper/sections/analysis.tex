@@ -100,3 +100,24 @@ $M_{\mathrm{ITL}}$, and the true onset lies higher
 (Table~\ref{tab:lower-bound-regime}: $M^\ast=69 > 40$ for the baseline). The closed form
 requires $nc=1$; under chunk-count jumps $\mathrm{itl}$ becomes piecewise-affine and a
 single-slope inversion errs by up to one step --- outside the scope of these scenarios.
+
+\subsection{Regime classification from primitives}
+\label{sec:regimes}
+
+A second primitive, $M_{\mathrm{TPF}}$ --- the largest $B$ whose prefill-only TTFT
+$\mathrm{ttft\_prefill}(B)$ meets the TTFT target --- combines with $M_{\mathrm{ITL}}$ to
+classify a scenario at zero oracle cost. The primitives partition parameter space into
+exactly three cells:
+\begin{description}
+  \item[Unbounded] neither SLO binds at $M_{\max}$;
+  \item[TTFT-only] $M_{\mathrm{TPF}} < M_{\mathrm{ITL}}$;
+  \item[ITL-or-crossover] $M_{\mathrm{ITL}} \le M_{\mathrm{TPF}}$.
+\end{description}
+The load-bearing signal is the \emph{ordering} of $M_{\mathrm{TPF}}$ and
+$M_{\mathrm{ITL}}$, not the two binding indicators alone: the TTFT-only scenario violates
+both SLOs at $M_{\max}$, so a test on the indicators misclassifies it as crossover.
+Note $M_{\mathrm{TPF}}$ bounds the $M$ at which the TTFT constraint first binds, not the
+onset: $\mathrm{ttft\_prefill}$ excludes the M/M/1 queue wait, so the realised TTFT
+frontier sits above $M_{\mathrm{TPF}}$ (the TTFT-only scenario has $M^\ast = 92 >
+M_{\mathrm{TPF}} = 70$). The ITL-only and crossover regimes share the third cell and are
+separated only by the oracle.
