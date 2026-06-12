@@ -55,3 +55,17 @@ def test_replay_formula_guided_baseline_trace():
     assert rec["M_chosen"] == 67
     assert rec["M_onset"] == 66
     assert rec["gap_f"] <= 0.02
+
+
+def test_evaluate_all_reproduces_headline():
+    results = E.evaluate_all()
+    bench_fg = results["aggregates"]["benchmark"]["formula_guided"]
+    assert bench_fg["calls_worst"] <= 8
+    assert bench_fg["gap_f_worst"] <= 0.02
+    assert bench_fg["gap_argmax_worst"] == 72
+    assert bench_fg["gap_onset_worst"] == 38
+    # baselines violate epsilon on the benchmark
+    assert results["aggregates"]["benchmark"]["naive_max"]["gap_f_worst"] > 0.02
+    assert results["aggregates"]["benchmark"]["naive_ternary"]["gap_f_worst"] > 0.02
+    # feasible-count invariant
+    assert results["aggregates"]["benchmark"]["n_scenarios"] == 25
