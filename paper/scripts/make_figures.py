@@ -180,7 +180,8 @@ def fig5_onset_search():
     seed = min(max(m_itl, m_tpf), M_MAX)
     lo = max(1, min(m_itl, m_tpf))
     hi = min(seed, 3 * m_itl, M_MAX)
-    f_anchor = f_of[M_MAX]
+    # Anchor f* at the cell-chosen seed (itl-or-crossover ⇒ U), matching the algorithm.
+    f_anchor = f_of[seed]
     threshold = (1.0 - EPS / 2.0) * f_anchor
 
     # Replay the downward binary search to mark the probed midpoints.
@@ -202,7 +203,7 @@ def fig5_onset_search():
     # Anchor and threshold (horizontal references).
     ax.axhline(f_anchor, color="C3", linestyle="-.", linewidth=1.0, zorder=1)
     ax.axhline(threshold, color="C3", linestyle=":", linewidth=1.0, zorder=1)
-    ax.text(M_MAX * 0.62, f_anchor * 1.01, r"anchor $f^*=f(M_{\max})$",
+    ax.text(M_MAX * 0.62, f_anchor * 1.01, r"anchor $f^*=f(U)$",
             color="C3", fontsize=8, va="bottom")
     ax.text(M_MAX * 0.62, threshold * 0.985, r"threshold $(1-\varepsilon/2)f^*$",
             color="C3", fontsize=8, va="top")

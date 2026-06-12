@@ -58,24 +58,31 @@ the occupancy-gap trap (\textbf{P4}). Algorithm~\ref{alg:onset} states the proce
 \subsection{Why each step}
 \label{sec:algo-rationale}
 
-\paragraph{Closed-form seed (P2).}
+\paragraph{Closed-form classification (P2).}
 The primitives $M_{\mathrm{ITL}}$ and $M_{\mathrm{TPF}}$ are computed from the service
-model alone, at zero oracle cost (\S\ref{sec:mitl}, \S\ref{sec:regimes}). The seed is
-\emph{cell-aware}: on the TTFT-only cell ($M_{\mathrm{TPF}} < M_{\mathrm{ITL}}$),
-$M_{\mathrm{TPF}}$ \emph{undershoots} the onset because the realised TTFT frontier sits
-above the prefill-only bound once M/M/1 queue wait is included, so there we seed the
-$f^\ast$ probe at $m_{\max}$ instead of at the constraint endpoint.
+model alone, at zero oracle cost (\S\ref{sec:mitl}, \S\ref{sec:regimes}), and their
+\emph{ordering} sorts the scenario into a regime cell: TTFT-only when
+$M_{\mathrm{TPF}} < M_{\mathrm{ITL}}$, ITL-or-crossover otherwise. This classification reads
+only workload and server parameters --- the SLO targets, the service coefficients, and the
+batch-size ceiling $m_{\max}$ --- and none of the search constants ($\varepsilon$,
+$\textsc{MaxIters}$, the bracket factor). The algorithm's discretion enters only after the
+cell is fixed, so the regime structure is a property of the deployment, not an artefact of
+the solver.
 
-\paragraph{High anchor at $f(M_{\max})$ (P4).}
-This is the load-bearing choice. Seeding the near-peak reference $f^\ast$ at the
-constraint endpoint $U=\max(M_{\mathrm{ITL}},M_{\mathrm{TPF}})$ can badly
-\emph{underestimate} the peak: when queue wait lets realised throughput climb far above
-the per-iteration binding batch size, $f(U) \ll f^\ast$, the threshold $\theta$ is set too
-low, and the descent halts prematurely. On one benchmark scenario the occupancy gap
-reaches $6.3\times$ ($U = 9$ while the plateau peak sits at $M \approx 57$); a
-$U$-anchored threshold stops the search at $M = 9$, a $22\%$ throughput shortfall that
-violates the $\varepsilon = 2\%$ tolerance. Anchoring $f^\ast$ at $f(M_{\max})$ reads the
-true plateau height and eliminates the failure, at the cost of one seed probe.
+\paragraph{Cell-dependent seed (P4).}
+The seed must read a \emph{near-peak} $f^\ast$: if it underestimates the peak, the threshold
+$\theta$ is set too low and the downward search halts prematurely. Which $M$ delivers a
+near-peak reading depends on the cell. In the ITL-or-crossover cell the binding ITL
+constraint has already plateaued by the upper endpoint
+$U=\max(M_{\mathrm{ITL}},M_{\mathrm{TPF}})$, so $f(U)\approx f^\ast$ and we seed at $U$. In
+the TTFT-only cell the closed-form endpoints \emph{undershoot}: the prefill bound
+$M_{\mathrm{TPF}}$ excludes the M/M/1 queue wait, so the realised TTFT frontier lies above
+it (\S\ref{sec:regimes}), and in the worst case $U$ collapses far below the plateau --- on
+one benchmark scenario $U = 9$ while peak throughput is attained at $M \approx 57$,
+$6.3\times$ higher. Seeding at $U$ there would set $\theta$ off $f(U)\ll f^\ast$ and stop
+the descent at $M = 9$, a $22\%$ shortfall that violates the $\varepsilon = 2\%$ tolerance.
+We therefore seed at $m_{\max}$ in the TTFT-only cell, which always lies on the plateau; a
+final guard re-probes at $m_{\max}$ if even the cell-chosen seed is infeasible.
 
 \paragraph{Bracket.}
 The lower end $\mathit{lo} = \min(M_{\mathrm{ITL}}, M_{\mathrm{TPF}})$ floors the search at
@@ -89,18 +96,20 @@ Searching to $\theta = (1-\varepsilon/2)f^\ast$ rather than $(1-\varepsilon)f^\a
 headroom so that a downstream confirmatory evaluation of the returned $\hat M$ still lands
 within the $\varepsilon$ SLO-feasibility tolerance.
 
-Figure~\ref{fig:onset-search} illustrates the procedure on the baseline scenario:
-the closed-form markers, the anchored threshold, and the downward probes converging to
-$M^\ast = 69$ from the bracket $[40, 120]$.
+Figure~\ref{fig:onset-search} illustrates the procedure on the baseline scenario (an
+ITL-or-crossover cell, so $f^\ast$ is read at $U = M_{\mathrm{TPF}} = 147$): the closed-form
+markers, the anchored threshold, and the downward probes descending from the bracket
+$[40, 120]$ toward the onset $M^\ast = 69$.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.85\linewidth]{fig5_onset_search}
-  \caption{Formula-guided onset search on the baseline. Closed-form $M_{\mathrm{ITL}}$ and
-           $M_{\mathrm{TPF}}$ bracket the search; $f^\ast$ is anchored at $f(M_{\max})$ and
-           the threshold set at $(1-\varepsilon/2)f^\ast$; the downward monotone-predicate
-           probes converge to the onset $M^\ast$. Illustrative; the measured evaluation is
-           in \S\ref{sec:experiments}.}
+  \caption{Formula-guided onset search on the baseline (ITL-or-crossover cell). Closed-form
+           $M_{\mathrm{ITL}}$ and $M_{\mathrm{TPF}}$ bracket the search; $f^\ast$ is read at
+           the constraint endpoint $U = M_{\mathrm{TPF}} = 147$, which already lies on the
+           plateau, and the threshold is set at $(1-\varepsilon/2)f^\ast$; the downward
+           monotone-predicate probes descend toward the onset $M^\ast$. Illustrative; the
+           measured evaluation is in \S\ref{sec:experiments}.}
   \label{fig:onset-search}
 \end{figure}
 
@@ -108,9 +117,11 @@ $M^\ast = 69$ from the bracket $[40, 120]$.
 \label{sec:algo-guarantees}
 
 \paragraph{Cost.}
-The procedure issues at most one seed probe, $\textsc{MaxIters}=6$ search probes, and one
-downstream confirmatory call --- eight oracle calls in total --- and is $O(\log M_{\max})$
-in the search range (\textbf{P3}).
+The procedure issues at most two seed probes --- the cell-chosen seed, plus an $m_{\max}$
+fallback when that seed is infeasible --- then at most $\textsc{MaxIters}=6$ search probes
+and one downstream confirmatory call: nine oracle calls in the worst case, and eight
+whenever the seed is feasible, as on every benchmark scenario (RP-8). The search is
+$O(\log m_{\max})$ (\textbf{P3}).
 
 \paragraph{Correctness.}
 Because $f$ is non-decreasing to a plateau (\textbf{P3}), the downward monotone-predicate
