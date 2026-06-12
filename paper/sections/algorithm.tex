@@ -54,3 +54,97 @@ the occupancy-gap trap (\textbf{P4}). Algorithm~\ref{alg:onset} states the proce
   \caption{\textsc{FormulaGuidedOnsetSearch} ($\textsc{MaxIters}=6$)}
   \label{alg:onset}
 \end{algorithm}
+
+\subsection{Why each step}
+\label{sec:algo-rationale}
+
+\paragraph{Closed-form seed (P2).}
+The primitives $M_{\mathrm{ITL}}$ and $M_{\mathrm{TPF}}$ are computed from the service
+model alone, at zero oracle cost (\S\ref{sec:mitl}, \S\ref{sec:regimes}). The seed is
+\emph{cell-aware}: on the TTFT-only cell ($M_{\mathrm{TPF}} < M_{\mathrm{ITL}}$),
+$M_{\mathrm{TPF}}$ \emph{undershoots} the onset because the realised TTFT frontier sits
+above the prefill-only bound once M/M/1 queue wait is included, so there we seed the
+$f^\ast$ probe at $m_{\max}$ instead of at the constraint endpoint.
+
+\paragraph{High anchor at $f(M_{\max})$ (P4).}
+This is the load-bearing choice. Seeding the near-peak reference $f^\ast$ at the
+constraint endpoint $U=\max(M_{\mathrm{ITL}},M_{\mathrm{TPF}})$ can badly
+\emph{underestimate} the peak: when queue wait lets realised throughput climb far above
+the per-iteration binding batch size, $f(U) \ll f^\ast$, the threshold $\theta$ is set too
+low, and the descent halts prematurely. On one benchmark scenario the occupancy gap
+reaches $6.3\times$ ($U = 9$ while the plateau peak sits at $M \approx 57$); a
+$U$-anchored threshold stops the search at $M = 9$, a $22\%$ throughput shortfall that
+violates the $\varepsilon = 2\%$ tolerance. Anchoring $f^\ast$ at $f(M_{\max})$ reads the
+true plateau height and eliminates the failure, at the cost of one seed probe.
+
+\paragraph{Bracket.}
+The lower end $\mathit{lo} = \min(M_{\mathrm{ITL}}, M_{\mathrm{TPF}})$ floors the search at
+$M_{\mathrm{TPF}}$ on the TTFT-only cell, where $M_{\mathrm{ITL}}$ overshoots the onset.
+The upper end is tightened by the occupancy-gap bound $3M_{\mathrm{ITL}}$ (the gap stays
+within this factor on the scenarios studied), relaxed to the seed on the TTFT-only cell
+where $M_{\mathrm{ITL}}$ is an unreliable tightener.
+
+\paragraph{Threshold margin.}
+Searching to $\theta = (1-\varepsilon/2)f^\ast$ rather than $(1-\varepsilon)f^\ast$ leaves
+headroom so that a downstream confirmatory evaluation of the returned $\hat M$ still lands
+within the $\varepsilon$ SLO-feasibility tolerance.
+
+Figure~\ref{fig:onset-search} illustrates the procedure on the baseline scenario:
+the closed-form markers, the anchored threshold, and the downward probes converging to
+$M^\ast = 69$ from the bracket $[40, 120]$.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\linewidth]{fig5_onset_search}
+  \caption{Formula-guided onset search on the baseline. Closed-form $M_{\mathrm{ITL}}$ and
+           $M_{\mathrm{TPF}}$ bracket the search; $f^\ast$ is anchored at $f(M_{\max})$ and
+           the threshold set at $(1-\varepsilon/2)f^\ast$; the downward monotone-predicate
+           probes converge to the onset $M^\ast$. Illustrative; the measured evaluation is
+           in \S\ref{sec:experiments}.}
+  \label{fig:onset-search}
+\end{figure}
+
+\subsection{Guarantees}
+\label{sec:algo-guarantees}
+
+\paragraph{Cost.}
+The procedure issues at most one seed probe, $\textsc{MaxIters}=6$ search probes, and one
+downstream confirmatory call --- eight oracle calls in total --- and is $O(\log M_{\max})$
+in the search range (\textbf{P3}).
+
+\paragraph{Correctness.}
+Because $f$ is non-decreasing to a plateau (\textbf{P3}), the downward monotone-predicate
+search returns the smallest $M$ in the bracket with $f(M) \ge \theta$, so the result meets
+the near-peak objective of Eq.~\eqref{eq:objective}. The single high anchor is safe while
+the post-peak decline of $f$ stays below $\varepsilon/2$ (\S\ref{sec:search}); under
+chunk-count jumps that produce a larger decline, a multi-probe $f^\ast$ would be required
+(left to future work).
+
+\paragraph{Onset, not argmax.}
+The search deliberately targets the onset $M^\ast$, not the strict throughput argmax, which
+can sit far higher on a plateau that wiggles at floating-point precision
+(\S\ref{sec:search}). Over-provisioning to the argmax wastes concurrency; any residual gap
+between the returned onset and the strict argmax is a structural property of the plateau,
+not a defect of the search.
+
+\subsection{Baselines}
+\label{sec:algo-baselines}
+
+We compare against two strategies that span the cost/quality extremes. \emph{Naive-max}
+returns $M_{\max}$ in a single oracle call but over-provisions concurrency.
+\emph{Parameter-blind ternary search} maximises $f$ over $[m_{\min}, m_{\max}]$; on a
+monotone-to-plateau curve it converges to an interior plateau point rather than the onset,
+solving the wrong objective, and spends roughly thirty oracle calls doing so. The
+formula-guided search Pareto-dominates both on the concurrency objective; the measured
+comparison across the benchmark is reported in \S\ref{sec:experiments}.
+
+\subsection{Provenance}
+\label{sec:algo-provenance}
+
+The closed-form primitives, the three-cell regime partition, and the high-anchor fix were
+not hand-designed but \emph{discovered} by an automated formula-discovery campaign that
+iteratively proposed and oracle-validated candidate structure against the queueing model.
+The campaign's recorded principles (RP-1 through RP-11) are the evidence base for the
+design choices above: the exact closed form under $nc=1$ (RP-1), the occupancy-gap
+anchor fix (RP-2), the monotone-to-plateau shape (RP-3), the regime partition and its
+load-bearing ordering signal (RP-6, RP-7), and the call-budget result (RP-8).
