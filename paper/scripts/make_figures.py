@@ -61,7 +61,27 @@ def main() -> None:
 
 
 # Stubs — implemented in subsequent tasks.
-def fig1_baseline_fM(): pass
+def fig1_baseline_fM():
+    truth = load_truth("baseline")
+    m_star = truth["M_truth"]            # onset == argmax on this float-flat plateau
+    f_star = truth["throughput_truth"]
+    ms = [pt["m"] for pt in truth["f_curve"]]
+    fs = [pt["throughput"] for pt in truth["f_curve"]]
+
+    fig, ax = plt.subplots(figsize=(5.5, 3.2))
+    ax.plot(ms, fs, color="C0")
+    ax.axvline(m_star, color="gray", linestyle="--", linewidth=1)
+    ax.annotate(f"$M^* = {m_star}$", xy=(m_star, f_star),
+                xytext=(m_star + 20, f_star * 0.55), fontsize=10, color="gray",
+                arrowprops=dict(arrowstyle="->", color="gray", lw=0.8))
+    ax.text(m_star / 2, f_star * 0.40, "rising", ha="center", color="C0", alpha=0.7)
+    ax.text((m_star + M_MAX) / 2, f_star * 1.04, "plateau", ha="center", color="C0", alpha=0.7)
+    ax.set_xlabel("MaxBatchSize $M$")
+    ax.set_ylabel("$f(M)$ — max RPS meeting SLOs")
+    ax.set_xlim(0, M_MAX)
+    ax.set_ylim(0, f_star * 1.15)
+    fig.savefig(FIG_DIR / "fig1_baseline_fM.pdf")
+    plt.close(fig)
 def fig2_overlay_fM(): pass
 def fig3_min_constraints(): pass
 def fig4_lower_bound_bracket(): pass
