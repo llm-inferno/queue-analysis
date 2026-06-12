@@ -121,3 +121,32 @@ onset: $\mathrm{ttft\_prefill}$ excludes the M/M/1 queue wait, so the realised T
 frontier sits above $M_{\mathrm{TPF}}$ (the TTFT-only scenario has $M^\ast = 92 >
 M_{\mathrm{TPF}} = 70$). The ITL-only and crossover regimes share the third cell and are
 separated only by the oracle.
+
+\subsection{Why search, not prediction}
+\label{sec:search}
+
+\paragraph{Structural plateau vs.\ numerical noise.}
+For $M \ge M^\ast$ the plateaued ITL constraint bounds $f$ from above
+(\S\ref{sec:min-constraints}). The $\sim\!10^{-4}$ wobble we observe over the plateau is
+solver noise, not true flatness at machine precision: the structural claim guarantees
+boundedness, not constancy. We therefore treat any $M \ge M^\ast$ as achieving $f^\ast$
+up to numerical precision.
+
+\paragraph{Onset vs.\ argmax.}
+The strict throughput argmax can sit well above the onset on a wide plateau that wiggles
+at floating-point precision (we have observed an onset near $46$ against an argmax of
+$118$ on wider grids). Over-provisioning to the argmax wastes concurrency, so we optimise
+the onset. On the six scenarios here the plateaus are flat to floating point, so the
+argmax coincides with the onset and our cached $M_{\text{truth}}$ is a faithful onset.
+
+\paragraph{The occupancy gap forces a search.}
+Table~\ref{tab:lower-bound-regime} reports the occupancy gap $M^\ast/M_{\mathrm{ITL}}$.
+On the ITL-governed scenarios it ranges from $1.59\times$ to $2.83\times$ and is not a
+constant (it widens further on broader grids), so $M_{\mathrm{ITL}}$ cannot predict
+$M^\ast$ directly. Instead it \emph{warm-starts} a downward monotone-predicate search:
+anchor the near-peak threshold at $f(M_{\max})$ --- a high anchor avoids underestimating
+the peak when queue wait lifts realised throughput far above the per-iteration bound ---
+and descend to the smallest $M$ still meeting the threshold. Because $f$ is non-decreasing
+to a plateau, this converges to the onset in $O(\log M_{\max})$ oracle calls.
+
+\input{tabs/lower_bound_regime}
