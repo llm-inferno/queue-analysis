@@ -56,6 +56,7 @@ def main() -> None:
     fig2_overlay_fM()
     fig3_min_constraints()
     fig4_lower_bound_bracket()
+    fig5_onset_search()
     tab1_lower_bound_regime()
     print("done")
 
@@ -160,6 +161,74 @@ def fig4_lower_bound_bracket():
     ax.set_xlim(0, M_MAX)
     ax.set_ylim(0, f_star * 1.15)
     fig.savefig(FIG_DIR / "fig4_lower_bound_bracket.pdf")
+    plt.close(fig)
+def fig5_onset_search():
+    """Method schematic: closed-form markers + anchor + downward search to M*.
+    Illustrative (baseline data); the measured evaluation lives in Experiments."""
+    truth = load_truth("baseline")
+    p = SCN_PARAMS["baseline"]
+    m_star = truth["M_truth"]
+    f_star = truth["throughput_truth"]
+    ms = [pt["m"] for pt in truth["f_curve"]]
+    fs = [pt["throughput"] for pt in truth["f_curve"]]
+    f_of = {pt["m"]: pt["throughput"] for pt in truth["f_curve"]}
+
+    EPS = 0.02
+    m_itl = P.m_itl(p, M_MAX)
+    m_tpf = P.m_tpf(p, M_MAX)
+    # Bracket exactly as formula_guided.py computes it (itl-or-crossover cell).
+    seed = min(max(m_itl, m_tpf), M_MAX)
+    lo = max(1, min(m_itl, m_tpf))
+    hi = min(seed, 3 * m_itl, M_MAX)
+    f_anchor = f_of[M_MAX]
+    threshold = (1.0 - EPS / 2.0) * f_anchor
+
+    # Replay the downward binary search to mark the probed midpoints.
+    a, b, probes = lo, hi, []
+    iters = 0
+    while a < b and iters < 6:
+        mid = (a + b) // 2
+        probes.append(mid)
+        if f_of[mid] >= threshold:
+            b = mid
+        else:
+            a = mid + 1
+        iters += 1
+
+    fig, ax = plt.subplots(figsize=(5.8, 3.4))
+    ax.plot(ms, fs, color="C0", zorder=2)
+    # Search bracket the algorithm narrows.
+    ax.axvspan(lo, hi, alpha=0.08, color="C0", zorder=0)
+    # Anchor and threshold (horizontal references).
+    ax.axhline(f_anchor, color="C3", linestyle="-.", linewidth=1.0, zorder=1)
+    ax.axhline(threshold, color="C3", linestyle=":", linewidth=1.0, zorder=1)
+    ax.text(M_MAX * 0.62, f_anchor * 1.01, r"anchor $f^*=f(M_{\max})$",
+            color="C3", fontsize=8, va="bottom")
+    ax.text(M_MAX * 0.62, threshold * 0.985, r"threshold $(1-\varepsilon/2)f^*$",
+            color="C3", fontsize=8, va="top")
+    # Closed-form markers and onset.
+    for x, c, lab in [(m_itl, "C2", rf"$M_{{\mathrm{{ITL}}}}={m_itl}$"),
+                      (m_star, "gray", rf"$M^*={m_star}$"),
+                      (m_tpf, "C1", rf"$M_{{\mathrm{{TPF}}}}={m_tpf}$")]:
+        ax.axvline(x, color=c, linestyle="--", linewidth=1.2, zorder=1)
+    # Downward-search probes: markers at each probed M on the curve.
+    for mid in probes:
+        ax.plot([mid], [f_of[mid]], marker="v", color="C4", markersize=6, zorder=3)
+    ax.annotate("downward search", xy=(probes[-1], f_of[probes[-1]]),
+                xytext=(lo + 6, f_star * 0.45), color="C4", fontsize=8,
+                arrowprops=dict(arrowstyle="->", color="C4", lw=0.8))
+    handles = [
+        plt.Line2D([0], [0], color="C2", linestyle="--", label=rf"$M_{{\mathrm{{ITL}}}}={m_itl}$ (lower bd)"),
+        plt.Line2D([0], [0], color="C1", linestyle="--", label=rf"$M_{{\mathrm{{TPF}}}}={m_tpf}$ (TTFT upper bd)"),
+        plt.Line2D([0], [0], color="gray", linestyle="--", label=rf"onset $M^*={m_star}$"),
+        plt.Line2D([0], [0], color="C4", marker="v", linestyle="", label="search probes"),
+    ]
+    ax.legend(handles=handles, loc="lower right", framealpha=0.9, fontsize=8)
+    ax.set_xlabel("MaxBatchSize $M$")
+    ax.set_ylabel("$f(M)$ [RPS]")
+    ax.set_xlim(0, M_MAX)
+    ax.set_ylim(0, f_star * 1.15)
+    fig.savefig(FIG_DIR / "fig5_onset_search.pdf")
     plt.close(fig)
 def tab1_lower_bound_regime():
     rows_out = []
