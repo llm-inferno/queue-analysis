@@ -126,12 +126,27 @@ Pareto axes and scoring
                       A 400-response (infeasibility) does NOT count toward this budget.
   gap_throughput_rel  (truth - chosen) / truth  (>= 0; lower is better; reported as
                                                  0 when truth = 0).
-  gap_M               |M_chosen - M_truth|      (reported, not the primary axis;
-                                                 flat plateaus make a large gap_M benign)
+  gap_M               |M_chosen - M_truth|      (CONCURRENCY metric — see below: how far
+                                                 the provisioned batch size sits above M*)
 
-Aggregate across scenarios as both worst-case (max) and mean. Worst-case is the primary
-comparison. Strategy A Pareto-dominates B iff worst-case A is no worse on both (calls,
-gap_throughput_rel) and strictly better on at least one.
+Aggregate across scenarios as both worst-case (max) and mean.
+
+CONCURRENCY EFFICIENCY (primary objective from iter-4 onward). Empirically (validated
+iter-3 on dev, iter-5 on the benchmark) f(M) is monotone-rising then FLAT: any M >= M*,
+INCLUDING the trivial constant M = M_max = 256, achieves peak throughput within ~3% in a
+single call. So gap_throughput_rel ALONE cannot reward a precise predictor — a dumb
+M_max ties every strategy on throughput. The deployed value of M-hat is therefore
+CONCURRENCY: the SMALLEST M that achieves near-peak throughput (the plateau-onset M*).
+Over-provisioning to M_max wastes batch slots / KV-cache memory for zero throughput gain.
+
+  - Target: onset M* = smallest M with gap_throughput_rel <= epsilon  (epsilon = 0.02).
+  - Headline Pareto axes are now (calls, gap_M), subject to gap_f <= epsilon. gap_M is
+    co-primary with calls; gap_f is a feasibility constraint to stay under, NOT the thing
+    to win — landing anywhere on the plateau already scores gap_f ~ 0.
+  - A strategy WINS iff, at gap_f <= epsilon, it Pareto-dominates BOTH baselines on
+    (calls, gap_M): naive_max (constant M_max — 1 call but gap_M ~ M_max - M*) AND
+    naive_ternary (blind search — ~25 calls). formula_guided must achieve this by finding
+    the onset M*, NOT by seeding at M_max.
 
 Scoring compares M_chosen against per-scenario truth caches (dev:
 nous/cache/truth-<name>.json; benchmark: nous/cache/bench/<idx>.json), held by the
@@ -160,14 +175,24 @@ listed output before advancing.
                         gap_M = |M-hat - M_truth|, gap_f = (f_truth - f_Mhat)/f_truth.
                         Gate: worst-case gap_f <= 20% on >= 4/6 scenarios. Decide:
                         predictor alone, or predictor + search refinement.
-  Iter 4  code_changes  Implement formula-guided search: M-hat -> bracket -> small
-                        /target refinement. Add formula_guided.py and a parameter-blind
-                        baseline naive_ternary.py. Gate: predicted worst-case calls <= 8
-                        and gap_f <= 5% on the dev set.
+  Iter 4  code_changes  Implement a CONCURRENCY-OPTIMAL formula-guided search that finds
+                        the plateau ONSET M* (smallest M with gap_f <= epsilon=0.02), NOT
+                        the bracket upper endpoint. Recommended mechanism: one probe at a
+                        high seed to estimate f*, then BINARY-SEARCH DOWNWARD in
+                        [M_ITL, seed] for the smallest M with f(M) >= (1-epsilon)*f*
+                        (monotone predicate -> ~6-8 calls). Add formula_guided.py plus
+                        baselines naive_ternary.py and naive_max.py (constant M_max).
+                        Gate: on the dev set, worst-case calls <= 8 AND gap_f <= epsilon
+                        AND formula_guided's worst-case gap_M strictly beats BOTH
+                        naive_max and naive_ternary (i.e. it lands near M*, low gap_M).
+                        NOTE: seeding high (gap_M large) is the prior failure mode — the
+                        win is LOW gap_M, not just low gap_f.
   Iter 5  code_changes  Run on the benchmark grid (nous/scenarios_benchmark.json).
-                        Pareto-compare formula_guided vs naive_ternary vs the prior
-                        baseline cohort. Per-regime breakdown (regime field x worst
-                        calls, worst gap). Honest comparison report.
+                        Pareto-compare on (calls, gap_M) subject to gap_f <= epsilon:
+                        formula_guided vs naive_max vs naive_ternary vs the prior baseline
+                        cohort. Per-regime breakdown (regime x worst calls, worst gap_M).
+                        Headline claim to test: formula_guided Pareto-dominates BOTH naive
+                        baselines on (calls, gap_M). Honest comparison report.
 
 Out of scope
 
