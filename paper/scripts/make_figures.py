@@ -161,7 +161,47 @@ def fig4_lower_bound_bracket():
     ax.set_ylim(0, f_star * 1.15)
     fig.savefig(FIG_DIR / "fig4_lower_bound_bracket.pdf")
     plt.close(fig)
-def tab1_lower_bound_regime(): pass
+def tab1_lower_bound_regime():
+    rows_out = []
+    for name in SCENARIOS:
+        p = SCN_PARAMS[name]
+        truth = load_truth(name)
+        m_itl = P.m_itl(p, M_MAX)
+        m_tpf = P.m_tpf(p, M_MAX)
+        m_star = truth["M_truth"]          # onset == argmax on the dev plateaus
+        f_star = truth["throughput_truth"]
+        gap = m_star / m_itl if m_itl > 0 else float("nan")
+        # gap_f at the lower bound: relative throughput shortfall if you stop at M_ITL.
+        f_at_mitl = truth["f_curve"][min(m_itl, len(truth["f_curve"])) - 1]["throughput"]
+        gap_f = (f_star - f_at_mitl) / f_star if f_star > 0 else 0.0
+        rows_out.append({
+            "name": name, "regime": truth["regime"],
+            "m_itl": m_itl, "m_tpf": m_tpf, "m_star": m_star,
+            "gap": gap, "gap_f": gap_f,
+        })
+
+    lines = [
+        r"\begin{table}[t]",
+        r"  \centering",
+        r"  \caption{Closed-form lower bound, regime, and occupancy gap across the "
+        r"six scenarios. $M_{\mathrm{ITL}}$ is exact under $nc=1$ (RP-1) and a lower "
+        r"bound on the onset $M^*$ (RP-2); the gap $M^*/M_{\mathrm{ITL}}$ is bounded but "
+        r"non-constant, motivating a warm-started search rather than direct prediction. "
+        r"The $\mathrm{ttft\text{-}only}$ row has $M_{\mathrm{TPF}}<M_{\mathrm{ITL}}$ "
+        r"(RP-7), the load-bearing classification signal.}",
+        r"  \label{tab:lower-bound-regime}",
+        r"  \begin{tabular}{llrrrrr}",
+        r"    \toprule",
+        r"    Scenario & regime & $M_{\mathrm{ITL}}$ & $M_{\mathrm{TPF}}$ & $M^*$ & "
+        r"$M^*/M_{\mathrm{ITL}}$ & gap$_f$ (\%) \\",
+        r"    \midrule",
+    ]
+    for r in rows_out:
+        lines.append(
+            f"    {r['name'].replace('-', '--')} & {r['regime']} & {r['m_itl']} & "
+            f"{r['m_tpf']} & {r['m_star']} & {r['gap']:.2f} & {r['gap_f']*100:.1f} \\\\")
+    lines += [r"    \bottomrule", r"  \end{tabular}", r"\end{table}", ""]
+    (TAB_DIR / "lower_bound_regime.tex").write_text("\n".join(lines))
 
 
 if __name__ == "__main__":
