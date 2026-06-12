@@ -1,0 +1,172 @@
+\section{Algorithm: Formula-Guided Onset Search}
+\label{sec:algorithm}
+
+The analysis of \S\ref{sec:analysis} reduces optimisation to \emph{onset detection}:
+because $f(M)$ rises to a plateau (\textbf{P1}), the operating point of interest is the
+smallest $M$ that reaches near-peak throughput,
+\begin{equation}
+  \hat M \;=\; \min\{\, M : f(M) \ge (1-\varepsilon)\,f^\ast \,\},
+  \qquad \varepsilon = 0.02,
+  \label{eq:objective}
+\end{equation}
+where the peak $f^\ast$ is not known in advance and must itself be probed. Two naive
+strategies bracket the design space. Returning $M_{\max}$ costs a single oracle call but
+over-provisions concurrency, defeating the purpose of optimising the onset. A
+parameter-blind search that simply \emph{maximises} $f$ converges to a point on the
+plateau interior --- the wrong objective for Eq.~\eqref{eq:objective} --- and spends many
+oracle calls doing so. We instead exploit the closed-form structure of
+\S\ref{sec:analysis}: warm-start from the closed-form primitives (\textbf{P2}), then run a
+short downward monotone-predicate search (\textbf{P3}) whose threshold is anchored to avoid
+the occupancy-gap trap (\textbf{P4}). Algorithm~\ref{alg:onset} states the procedure.
+
+\begin{algorithm}[t]
+  \DontPrintSemicolon
+  \SetKwFunction{FBisect}{Bisect}
+  \SetKwProg{Fn}{Function}{:}{}
+  \KwIn{params; oracle $f(\cdot)$; bounds $m_{\min}, m_{\max}$; tolerance $\varepsilon$}
+  \KwOut{onset estimate $\hat M \in [m_{\min}, m_{\max}]$}
+  $M_{\mathrm{ITL}} \leftarrow$ largest $B$ with $\mathrm{itl}(B) \le \mathrm{targetITL}$
+    \tcp*{closed form, no oracle calls}
+  $M_{\mathrm{TPF}} \leftarrow$ largest $B$ with $\mathrm{ttft\_prefill}(B) \le \mathrm{targetTTFT}$\;
+  \eIf{$M_{\mathrm{TPF}} < M_{\mathrm{ITL}}$}{
+    $\mathit{seed} \leftarrow m_{\max}$ \tcp*{ttft-only cell: $M_{\mathrm{TPF}}$ undershoots}
+  }{
+    $\mathit{seed} \leftarrow \min(\max(M_{\mathrm{ITL}}, M_{\mathrm{TPF}}), m_{\max})$\;
+  }
+  $f^\ast \leftarrow f(\mathit{seed})$ \tcp*{1 oracle call}
+  \If{$f^\ast \le 0$ \textbf{and} $\mathit{seed} < m_{\max}$}{
+    $\mathit{seed} \leftarrow m_{\max}$;\quad $f^\ast \leftarrow f(\mathit{seed})$\;
+  }
+  \lIf{$f^\ast \le 0$}{\Return $m_{\max}$ \tcp*[f]{infeasible everywhere probed}}
+  $\theta \leftarrow (1 - \varepsilon/2)\, f^\ast$ \tcp*{margin keeps a confirmatory call $<\varepsilon$}
+  $\mathit{lo} \leftarrow \max(m_{\min},\, \min(M_{\mathrm{ITL}}, M_{\mathrm{TPF}}))$\;
+  \eIf{$M_{\mathrm{TPF}} < M_{\mathrm{ITL}}$}{
+    $\mathit{hi} \leftarrow \min(\mathit{seed}, m_{\max})$\;
+  }{
+    $\mathit{hi} \leftarrow \min(\mathit{seed},\, 3 M_{\mathrm{ITL}},\, m_{\max})$
+      \tcp*{occupancy-gap bound}
+  }
+  $\mathit{hi} \leftarrow \max(\mathit{lo}, \mathit{hi})$\;
+  \Return \FBisect{$f$, $\theta$, $\mathit{lo}$, $\mathit{hi}$}
+    \tcp*{$\mathit{lo},\mathit{hi}\in[m_{\min},m_{\max}]$ by construction}
+  \BlankLine
+  \Fn{\FBisect{$f$, $\theta$, $\mathit{lo}$, $\mathit{hi}$}}{
+    \tcp{smallest $M\in[\mathit{lo},\mathit{hi}]$ with $f(M)\ge\theta$, in $\le\textsc{MaxIters}$ probes}
+    $i \leftarrow 0$\;
+    \While{$\mathit{lo} < \mathit{hi}$ \textbf{and} $i < \textsc{MaxIters}$}{
+      $\mathit{mid} \leftarrow \lfloor (\mathit{lo}+\mathit{hi})/2 \rfloor$\;
+      \eIf{$f(\mathit{mid}) \ge \theta$}{$\mathit{hi} \leftarrow \mathit{mid}$}{$\mathit{lo} \leftarrow \mathit{mid}+1$}
+      $i \leftarrow i + 1$\;
+    }
+    \Return $\mathit{hi}$\;
+  }
+  \caption{\textsc{FormulaGuidedOnsetSearch} ($\textsc{MaxIters}=6$); the
+           bracketed search is \textsc{Bisect}, a bounded monotone-predicate
+           binary search.}
+  \label{alg:onset}
+\end{algorithm}
+
+\subsection{Why each step}
+\label{sec:algo-rationale}
+
+\paragraph{Closed-form classification (P2).}
+The primitives $M_{\mathrm{ITL}}$ and $M_{\mathrm{TPF}}$ are computed from the service
+model alone, at zero oracle cost (\S\ref{sec:mitl}, \S\ref{sec:regimes}), and their
+\emph{ordering} sorts the scenario into a regime cell: TTFT-only when
+$M_{\mathrm{TPF}} < M_{\mathrm{ITL}}$, ITL-or-crossover otherwise. This classification reads
+only workload and server parameters --- the SLO targets, the service coefficients, and the
+batch-size ceiling $m_{\max}$ --- and none of the search constants ($\varepsilon$,
+$\textsc{MaxIters}$, the bracket factor). The algorithm's discretion enters only after the
+cell is fixed, so the regime structure is a property of the deployment, not an artefact of
+the solver.
+
+\paragraph{Cell-dependent seed (P4).}
+The seed must read a \emph{near-peak} $f^\ast$: if it underestimates the peak, the threshold
+$\theta$ is set too low and the downward search halts prematurely. Which $M$ delivers a
+near-peak reading depends on the cell. In the ITL-or-crossover cell the binding ITL
+constraint has already plateaued by the upper endpoint
+$U=\max(M_{\mathrm{ITL}},M_{\mathrm{TPF}})$, so $f(U)\approx f^\ast$ and we seed at $U$. In
+the TTFT-only cell the closed-form endpoints \emph{undershoot}: the prefill bound
+$M_{\mathrm{TPF}}$ excludes the M/M/1 queue wait, so the realised TTFT frontier lies above
+it (\S\ref{sec:regimes}), and in the worst case $U$ collapses far below the plateau --- on
+one benchmark scenario $U = 9$ while peak throughput is attained at $M \approx 57$,
+$6.3\times$ higher. Seeding at $U$ there would set $\theta$ off $f(U)\ll f^\ast$ and stop
+the descent at $M = 9$, a $22\%$ shortfall that violates the $\varepsilon = 2\%$ tolerance.
+We therefore seed at $m_{\max}$ in the TTFT-only cell, which always lies on the plateau; a
+final guard re-probes at $m_{\max}$ if even the cell-chosen seed is infeasible.
+
+\paragraph{Bracket.}
+The lower end $\mathit{lo} = \min(M_{\mathrm{ITL}}, M_{\mathrm{TPF}})$ floors the search at
+$M_{\mathrm{TPF}}$ on the TTFT-only cell, where $M_{\mathrm{ITL}}$ overshoots the onset.
+The upper end is tightened by the occupancy-gap bound $3M_{\mathrm{ITL}}$ (the gap stays
+within this factor on the scenarios studied), relaxed to the seed on the TTFT-only cell
+where $M_{\mathrm{ITL}}$ is an unreliable tightener.
+
+\paragraph{Threshold margin.}
+Searching to $\theta = (1-\varepsilon/2)f^\ast$ rather than $(1-\varepsilon)f^\ast$ leaves
+headroom so that a downstream confirmatory evaluation of the returned $\hat M$ still lands
+within the $\varepsilon$ SLO-feasibility tolerance.
+
+Figure~\ref{fig:onset-search} illustrates the procedure on the baseline scenario (an
+ITL-or-crossover cell, so $f^\ast$ is read at $U = M_{\mathrm{TPF}} = 147$): the closed-form
+markers, the anchored threshold, and the downward probes descending from the bracket
+$[40, 120]$ toward the onset $M^\ast = 69$.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\linewidth]{fig5_onset_search}
+  \caption{Formula-guided onset search on the baseline (ITL-or-crossover cell). Closed-form
+           $M_{\mathrm{ITL}}$ and $M_{\mathrm{TPF}}$ bracket the search; $f^\ast$ is read at
+           the constraint endpoint $U = M_{\mathrm{TPF}} = 147$, which already lies on the
+           plateau, and the threshold is set at $(1-\varepsilon/2)f^\ast$; the downward
+           monotone-predicate probes descend toward the onset $M^\ast$. Illustrative; the
+           measured evaluation is in \S\ref{sec:experiments}.}
+  \label{fig:onset-search}
+\end{figure}
+
+\subsection{Guarantees}
+\label{sec:algo-guarantees}
+
+\paragraph{Cost.}
+The procedure issues at most two seed probes --- the cell-chosen seed, plus an $m_{\max}$
+fallback when that seed is infeasible --- then at most $\textsc{MaxIters}=6$ search probes
+and one downstream confirmatory call: nine oracle calls in the worst case, and eight
+whenever the seed is feasible, as on every benchmark scenario (RP-8). The search is
+$O(\log m_{\max})$ (\textbf{P3}).
+
+\paragraph{Correctness.}
+Because $f$ is non-decreasing to a plateau (\textbf{P3}), \textsc{Bisect} returns the
+smallest $M$ in the bracket with $f(M) \ge \theta$, so the result meets the near-peak
+objective of Eq.~\eqref{eq:objective}. The single high anchor is safe while
+the post-peak decline of $f$ stays below $\varepsilon/2$ (\S\ref{sec:search}); under
+chunk-count jumps that produce a larger decline, a multi-probe $f^\ast$ would be required
+(left to future work).
+
+\paragraph{Onset, not argmax.}
+The search deliberately targets the onset $M^\ast$, not the strict throughput argmax, which
+can sit far higher on a plateau that wiggles at floating-point precision
+(\S\ref{sec:search}). Over-provisioning to the argmax wastes concurrency; any residual gap
+between the returned onset and the strict argmax is a structural property of the plateau,
+not a defect of the search.
+
+\subsection{Baselines}
+\label{sec:algo-baselines}
+
+We compare against two strategies that span the cost/quality extremes. \emph{Naive-max}
+returns $M_{\max}$ in a single oracle call but over-provisions concurrency.
+\emph{Parameter-blind ternary search} maximises $f$ over $[m_{\min}, m_{\max}]$; on a
+monotone-to-plateau curve it converges to an interior plateau point rather than the onset,
+solving the wrong objective, and spends roughly thirty oracle calls doing so. The
+formula-guided search Pareto-dominates both on the concurrency objective; the measured
+comparison across the benchmark is reported in \S\ref{sec:experiments}.
+
+\subsection{Provenance}
+\label{sec:algo-provenance}
+
+The closed-form primitives, the three-cell regime partition, and the high-anchor fix were
+not hand-designed but \emph{discovered} by an automated formula-discovery campaign that
+iteratively proposed and oracle-validated candidate structure against the queueing model.
+The campaign's recorded principles (RP-1 through RP-11) are the evidence base for the
+design choices above: the exact closed form under $nc=1$ (RP-1), the occupancy-gap
+anchor fix (RP-2), the monotone-to-plateau shape (RP-3), the regime partition and its
+load-bearing ordering signal (RP-6, RP-7), and the call-budget result (RP-8).

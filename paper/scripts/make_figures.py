@@ -9,6 +9,7 @@ Outputs:
   - paper/tabs/lower_bound_regime.tex
 """
 import json
+from collections import namedtuple
 from pathlib import Path
 
 import matplotlib
@@ -24,6 +25,9 @@ DATA_DIR = REPO / "paper" / "data"
 FIG_DIR = REPO / "paper" / "figs"
 TAB_DIR = REPO / "paper" / "tabs"
 M_MAX = 256
+# Search constants, mirroring nous/harness/strategies/formula_guided.py.
+EPS = 0.02
+MAX_ITERS = 6
 
 # Display order, grouped by regime; baseline first (headline).
 SCENARIOS = ["baseline", "alpha-low", "alpha-high", "itl-only", "ttft-only", "unbounded"]
@@ -56,6 +60,7 @@ def main() -> None:
     fig2_overlay_fM()
     fig3_min_constraints()
     fig4_lower_bound_bracket()
+    fig5_onset_search()
     tab1_lower_bound_regime()
     print("done")
 
@@ -131,35 +136,96 @@ def fig3_min_constraints():
     ax.legend(loc="lower right", framealpha=0.9)
     fig.savefig(FIG_DIR / "fig3_min_constraints.pdf")
     plt.close(fig)
-def fig4_lower_bound_bracket():
+_BaselineFM = namedtuple("_BaselineFM", "f_of m_itl m_tpf m_star f_star")
+
+
+def _baseline_fM_axes():
+    """Shared setup for the baseline f(M) figures (fig4, fig5): load the truth
+    curve and closed-form primitives, plot f(M), and configure the axes. Returns
+    the figure, axes, and the values both figures annotate."""
     truth = load_truth("baseline")
     p = SCN_PARAMS["baseline"]
-    m_star = truth["M_truth"]
-    f_star = truth["throughput_truth"]
     ms = [pt["m"] for pt in truth["f_curve"]]
     fs = [pt["throughput"] for pt in truth["f_curve"]]
-    m_itl = P.m_itl(p, M_MAX)
-    m_tpf = P.m_tpf(p, M_MAX)
-
+    ctx = _BaselineFM(
+        f_of={pt["m"]: pt["throughput"] for pt in truth["f_curve"]},
+        m_itl=P.m_itl(p, M_MAX), m_tpf=P.m_tpf(p, M_MAX),
+        m_star=truth["M_truth"], f_star=truth["throughput_truth"],
+    )
     fig, ax = plt.subplots(figsize=(5.8, 3.4))
     ax.plot(ms, fs, color="C0", zorder=2)
-    marks = [
-        (m_itl, "C2", f"$M_{{\\mathrm{{ITL}}}}={m_itl}$", "lower bound"),
-        (m_star, "gray", f"$M^*={m_star}$", "onset"),
-        (m_tpf, "C1", f"$M_{{\\mathrm{{TPF}}}}={m_tpf}$", "TTFT upper bd"),
-    ]
-    for x, c, lab, _ in marks:
-        ax.axvline(x, color=c, linestyle="--", linewidth=1.2, zorder=1)
-    # Shade the [M_ITL, M_TPF] bracket the search narrows.
-    ax.axvspan(m_itl, m_tpf, alpha=0.08, color="C0", zorder=0)
-    handles = [plt.Line2D([0], [0], color=c, linestyle="--", label=lab)
-               for x, c, lab, _ in marks]
-    ax.legend(handles=handles, loc="lower right", framealpha=0.9)
     ax.set_xlabel("MaxBatchSize $M$")
     ax.set_ylabel("$f(M)$ [RPS]")
     ax.set_xlim(0, M_MAX)
-    ax.set_ylim(0, f_star * 1.15)
+    ax.set_ylim(0, ctx.f_star * 1.15)
+    return fig, ax, ctx
+def fig4_lower_bound_bracket():
+    fig, ax, c = _baseline_fM_axes()
+    marks = [
+        (c.m_itl, "C2", rf"$M_{{\mathrm{{ITL}}}}={c.m_itl}$"),
+        (c.m_star, "gray", rf"$M^*={c.m_star}$"),
+        (c.m_tpf, "C1", rf"$M_{{\mathrm{{TPF}}}}={c.m_tpf}$"),
+    ]
+    for x, color, _lab in marks:
+        ax.axvline(x, color=color, linestyle="--", linewidth=1.2, zorder=1)
+    # Shade the [M_ITL, M_TPF] bracket the search narrows.
+    ax.axvspan(c.m_itl, c.m_tpf, alpha=0.08, color="C0", zorder=0)
+    handles = [plt.Line2D([0], [0], color=color, linestyle="--", label=lab)
+               for _x, color, lab in marks]
+    ax.legend(handles=handles, loc="lower right", framealpha=0.9)
     fig.savefig(FIG_DIR / "fig4_lower_bound_bracket.pdf")
+    plt.close(fig)
+def fig5_onset_search():
+    """Method schematic: closed-form markers + anchor + downward search to M*.
+    Illustrative (baseline data); the measured evaluation lives in Experiments."""
+    fig, ax, c = _baseline_fM_axes()
+    # Bracket exactly as formula_guided.py computes it (itl-or-crossover cell).
+    seed = min(max(c.m_itl, c.m_tpf), M_MAX)
+    lo = max(1, min(c.m_itl, c.m_tpf))
+    hi = min(seed, 3 * c.m_itl, M_MAX)
+    # Anchor f* at the cell-chosen seed (itl-or-crossover ⇒ U), matching the algorithm.
+    f_anchor = c.f_of[seed]
+    threshold = (1.0 - EPS / 2.0) * f_anchor
+
+    # Replay the downward binary search to mark the probed midpoints.
+    lo_i, hi_i, probes = lo, hi, []
+    for _ in range(MAX_ITERS):
+        if lo_i >= hi_i:
+            break
+        mid = (lo_i + hi_i) // 2
+        probes.append(mid)
+        if c.f_of[mid] >= threshold:
+            hi_i = mid
+        else:
+            lo_i = mid + 1
+
+    # Search bracket the algorithm narrows.
+    ax.axvspan(lo, hi, alpha=0.08, color="C0", zorder=0)
+    # Anchor and threshold (horizontal references).
+    ax.axhline(f_anchor, color="C3", linestyle="-.", linewidth=1.0, zorder=1)
+    ax.axhline(threshold, color="C3", linestyle=":", linewidth=1.0, zorder=1)
+    ax.text(M_MAX * 0.62, f_anchor * 1.01, r"anchor $f^*=f(U)$",
+            color="C3", fontsize=8, va="bottom")
+    ax.text(M_MAX * 0.62, threshold * 0.985, r"threshold $(1-\varepsilon/2)f^*$",
+            color="C3", fontsize=8, va="top")
+    # Closed-form markers and onset.
+    for x, color in [(c.m_itl, "C2"), (c.m_star, "gray"), (c.m_tpf, "C1")]:
+        ax.axvline(x, color=color, linestyle="--", linewidth=1.2, zorder=1)
+    # Downward-search probes: markers at each probed M on the curve.
+    for mid in probes:
+        ax.plot([mid], [c.f_of[mid]], marker="v", color="C4", markersize=6, zorder=3)
+    if probes:
+        ax.annotate("downward search", xy=(probes[-1], c.f_of[probes[-1]]),
+                    xytext=(lo + 6, c.f_star * 0.45), color="C4", fontsize=8,
+                    arrowprops=dict(arrowstyle="->", color="C4", lw=0.8))
+    handles = [
+        plt.Line2D([0], [0], color="C2", linestyle="--", label=rf"$M_{{\mathrm{{ITL}}}}={c.m_itl}$ (lower bd)"),
+        plt.Line2D([0], [0], color="C1", linestyle="--", label=rf"$M_{{\mathrm{{TPF}}}}={c.m_tpf}$ (TTFT upper bd)"),
+        plt.Line2D([0], [0], color="gray", linestyle="--", label=rf"onset $M^*={c.m_star}$"),
+        plt.Line2D([0], [0], color="C4", marker="v", linestyle="", label="search probes"),
+    ]
+    ax.legend(handles=handles, loc="lower right", framealpha=0.9, fontsize=8)
+    fig.savefig(FIG_DIR / "fig5_onset_search.pdf")
     plt.close(fig)
 def tab1_lower_bound_regime():
     rows_out = []
