@@ -7,8 +7,8 @@ Gate criteria are in the spec, `docs/superpowers/specs/2026-06-11-nous-reformula
 **Branch:** `nous-formula-campaign`  ·  **run_id:** `queue-throughput-formulas` (set in `nous/campaign.yaml`)
 **Artifacts land in:** `.nous/queue-throughput-formulas/` (bundle.yaml / findings.json / report)
 
-Run **one iteration at a time** so every gate is reviewed before the next. `target` for the
-`status` / `resume` / `report` subcommands is the run_id.
+Run **one iteration at a time** so every gate is reviewed before the next. Only `status`
+takes the run_id; `run` / `resume` / `report` take the **campaign.yaml path**.
 
 ---
 
@@ -69,15 +69,15 @@ nous resume nous/campaign.yaml --max-iterations 2      # runs iteration 2, then 
 nous resume nous/campaign.yaml --max-iterations 3      # iteration 3
 nous resume nous/campaign.yaml --max-iterations 4      # iteration 4
 nous resume nous/campaign.yaml --max-iterations 5      # iteration 5
-nous report queue-throughput-formulas                  # rolled-up report (takes the run_id)
+nous report nous/campaign.yaml                         # rolled-up report (takes the campaign.yaml PATH)
 ```
 
 (iter 1 was the initial `nous run ... --max-iterations 1`. If you'd rather not gate, omit
 `--max-iterations` and it runs straight to the campaign's `max_iterations: 5`.)
 
 > **CLI gotchas:**
-> - `status` / `report` take the **run_id** (`queue-throughput-formulas`); `run` / `resume`
->   take a **campaign.yaml path**. Passing the run_id to `resume` errors "resume requires campaign.yaml".
+> - Only `status` takes the **run_id** (`queue-throughput-formulas`); `run` / `resume` / `report`
+>   take a **campaign.yaml path**. Passing the run_id to `resume`/`report` errors "... requires campaign.yaml".
 > - `resume nous/campaign.yaml` reads `run_id`+`repo_path` from the file to locate the existing
 >   `.nous/<run_id>/` work dir and continues it (does NOT start a new run). Editing
 >   `nous/campaign.yaml` between iterations DOES take effect on the next resume (it loads the file
