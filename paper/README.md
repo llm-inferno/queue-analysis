@@ -14,6 +14,7 @@ cd paper/scripts
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python sweep_baseline.py        # one-shot; writes paper/data/baseline_lambda_sweep.json
+python eval_strategies.py         # replays strategies vs caches -> paper/data/eval_results.json
 python make_figures.py          # produces paper/figs/*.pdf and paper/tabs/*.tex
 ```
 
