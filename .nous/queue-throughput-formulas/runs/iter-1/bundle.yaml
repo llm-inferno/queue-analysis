@@ -1,0 +1,103 @@
+metadata:
+  iteration: 1
+  family: "closed-form-Mhat-derivation"
+  research_question: >-
+    Derive M-hat(params) = argmax_M f(M) closed-form from the analytic primitives
+    itl(B), ttft_prefill(B), and tau(B), solving each binding constraint (ITL, TTFT,
+    queue) in isolation with explicit assumptions. Iter-1 is observe: validate the
+    derivation's load-bearing facts against nous/harness/formulas.py only — NO /target
+    (oracle) calls, NO truth-cache reads, NO code changes.
+
+arm_selection_rationale: >-
+  Iter-1 derives a closed form and must validate it without the oracle, so all arms are
+  falsifiable assertions on formulas.py output (results/baseline.json). h-main is the
+  core claim: the ITL closed form is EXACT under the nc=1 structure that holds across the
+  dev set. h-control-negative checks the "nothing binds" branch (unbounded regime) where
+  the predictor must fall back to M_max — this validates mechanism specificity, since the
+  ITL crossing should disappear exactly when itl(256) < targetITL. h-ablation removes the
+  nc=1 condition (synthetic high-input profile) to show it is NECESSARY for exactness,
+  simultaneously scoping the benchmark/high-input regime as "needs case analysis."
+  h-robustness establishes the structural properties of saturation S(B) that justify WHY
+  latency constraints (not M itself) set M*. h-super-additivity is omitted: iter-1 is a
+  single-mechanism analytic derivation with no interacting factors to combine.
+
+arms:
+  - type: h-main
+    prediction: >-
+      For all six dev scenarios, nc(B)=1 across B in [1,256] makes itl(B) exactly affine,
+      so the closed form M_ITL = clamp(floor(1 + (targetITL - itl(1))/delta), 1, 256)
+      equals the largest B with itl(B) <= targetITL from a brute scan with ZERO
+      discrepancy on every scenario; and itl(B), ttft_prefill(B), tau(B) are each strictly
+      increasing in B. Directionally, M_ITL is a lower bound on the (oracle) plateau-onset
+      M* because realized AvgITL <= itl(B); the exact-match claim concerns the closed
+      form vs the brute scan of the SAME primitive, not vs the oracle.
+    mechanism: >-
+      With nc=1, delta = (w_prefill(1)+w_decode)/(1+m) is independent of B
+      (formulas.py:69-73), so bg(B)=alpha+(B-1)*delta is exactly linear (formulas.py:81-83)
+      and itl(B)=bg(B)+beta+gamma*(n+(m+1)/2) is affine with slope delta
+      (formulas.py:93-96). Inverting an affine function for an integer threshold is exact,
+      hence the floor-form equals the brute scan. Monotonicity follows from delta>0.
+    diagnostic: >-
+      If the closed form deviates from the brute scan on any dev scenario, check whether
+      nc actually jumped within [1,256] for that scenario (num_iterations_per_prefill),
+      which would make delta vary with B and break affineness; or whether bg hit its
+      max(0,.) floor at small B (it does not for these alphas). If itl is non-monotonic,
+      re-derive delta's sign and re-check the nc table.
+
+  - type: h-control-negative
+    prediction: >-
+      For the `unbounded` scenario the ITL constraint does not bind anywhere in range:
+      itl(256) < targetITL (15.94 < 200), so no interior ITL crossing exists and the
+      closed form returns M_ITL = M_max = 256. The predictor's combination rule must
+      therefore select M_max rather than an interior crossing for this regime.
+    mechanism: >-
+      The closed-form crossing 1 + (targetITL - itl(1))/delta exceeds 256 exactly when
+      itl(256) <= targetITL; the clamp then pins M_ITL to 256. With the unbounded
+      scenario's small tokens/loose targets, the affine itl never reaches targetITL in
+      [1,256], so the "effect" (an interior ITL cap) vanishes — validating that the
+      mechanism is specific to constraint-binding regimes.
+    diagnostic: >-
+      If unbounded shows an interior M_ITL < 256, recompute itl(256) vs targetITL; a bind
+      would mean the token profile or target was mis-specified. If a different scenario
+      unexpectedly hits the clamp, that scenario is also unbounded for ITL and the regime
+      label should be revisited in iter-2.
+
+  - type: h-ablation
+    component: "nc-equals-one"
+    prediction: >-
+      On a synthetic high-input profile (AvgInputTokens=7500, AvgOutputTokens=64,
+      targetITL=200) the chunk count exceeds 1 within the feasible range (nc reaches 2,
+      jumps near B=6,39,...), and the affine-from-B=1 closed form M_ITL no longer matches
+      the brute scan (predicts 30 vs true 31). Removing the nc=1 condition therefore
+      breaks the closed form's exactness, establishing nc=1 as a NECESSARY precondition
+      and scoping the high-input/benchmark regime as "needs piecewise case analysis."
+    mechanism: >-
+      When nc(B) jumps (formulas.py:33-46, utils.go:8-47), delta is recomputed at the new
+      nc (formulas.py:69-73) and itl is piecewise-affine with a different slope above the
+      jump. A single-slope inversion taken at B=1 then mis-estimates the crossing by up to
+      one integer step, because the true itl curve bends at the jump.
+    diagnostic: >-
+      If the high-input closed form still matches the brute scan, the ITL crossing fell
+      below the first nc jump (so nc=1 still held at the crossing) — pick a looser
+      targetITL or higher AvgInputTokens so the crossing sits above a jump. If nc never
+      exceeds 1, increase AvgInputTokens toward MaxNumTokens=8192 to force chunking.
+
+  - type: h-robustness
+    prediction: >-
+      For all six dev scenarios the saturation throughput S(B)=1000*B/tau(B) is
+      monotonically increasing and concave over [1,256], and S(256) lies strictly below
+      the analytic ceiling S_inf = 1000/((1+m)*delta) (observed ratio 0.75–0.96,
+      approaching from below). Consequently M is never capped from above by saturation —
+      throughput is non-decreasing in M — so the useful upper bound on M is set by the
+      binding latency constraint, not by saturation.
+    mechanism: >-
+      With nc=1, tau(B)=(1+m)*(alpha+B*delta) (formulas.py:76-79), so
+      S(B)=1000/(1+m) * B/(alpha+B*delta). The map B/(alpha+B*delta) is increasing and
+      concave with limit 1/delta, giving S_inf=1000/((1+m)*delta). Concavity means
+      diminishing returns but never a decrease, so saturation imposes no interior maximum
+      on M.
+    diagnostic: >-
+      If S(B) is non-monotone or exceeds the ceiling, re-check that nc stayed at 1 (a jump
+      raises tau and could dent S locally). If S(256) is far below the ceiling for a
+      scenario, that scenario simply has not reached saturation by B=256 — expected for
+      large-(1+m)*delta profiles, not a refutation.

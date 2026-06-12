@@ -1,0 +1,66 @@
+--- /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/harness/strategies/formula_guided.py	2026-06-12 07:48:43
++++ /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous-experiments/iter-5-deeeeed9/nous/harness/strategies/formula_guided.py	2026-06-12 09:19:11
+@@ -1,19 +1,17 @@
+-"""formula_guided: closed-form guided downward onset search.
++"""formula_guided: closed-form guided downward onset search (benchmark-robust v3).
+ 
+-Probes a high seed for f*, then binary-searches downward for the smallest M
++Probes m_max for f*, then binary-searches downward for the smallest M
+ with f(M) >= (1-EPS/2)*f* — the plateau onset M*.
+ 
+ Algorithm:
+ 1. Compute M_ITL (largest B with itl(B)<=targetITL) and M_TPF (largest B with
+    ttft_prefill(B)<=targetTTFT) via the closed-form formulas.
+-2. Cell-aware seed (RP-7): if M_TPF < M_ITL (ttft-only cell) seed at m_max to
+-   avoid the undershooting U=M_TPF (RP-5); else seed at U=min(M_TPF, m_max).
+-3. Probe f* = target_eval(seed). Fall back to m_max if seed is infeasible.
++2. Always anchor f* at m_max (robust to U underestimating the peak, RP-2).
++3. On fully-infeasible scenarios (m_max returns throughput<=0), return m_min
++   to match the truth convention M_truth=m_min.
+ 4. threshold = (1-EPS/2)*f* so the harness confirmatory call stays < EPS=0.02.
+-5. Lower bracket lo = max(m_min, min(M_ITL, M_TPF)) (floors at M_TPF on ttft-only
+-   where M_ITL=95 overshoots onset M*=92).
+-6. Upper bracket hi = min(seed, 3*M_ITL) (occupancy-gap bound RP-2); for
+-   ttft-only use hi=seed (M_ITL unreliable as tightener there).
++5. Lower bracket lo = max(m_min, min(M_ITL, M_TPF)).
++6. Upper bracket hi = min(seed, max(3*max(M_ITL,M_TPF), lo+1), m_max).
+ 7. Binary search [lo, hi]; cap at MAX_ITERS=6 so worst-case total calls
+    (seed + search + harness-confirmatory) <= 8.
+ """
+@@ -36,31 +34,16 @@
+     M_ITL = _largest_feasible(F.itl, params, params["targetITL"])
+     M_TPF = _largest_feasible(F.ttft_prefill, params, params["targetTTFT"])
+ 
+-    # Cell-aware seed: probe f* HIGH when M_TPF < M_ITL (ttft-only cell, RP-7)
+-    ttft_only_cell = M_TPF < M_ITL
+-    if ttft_only_cell:
+-        seed = m_max
+-    else:
+-        seed = min(max(M_ITL, M_TPF), m_max)  # constraint upper endpoint U
+-
+-    result = target_eval(seed)
+-    fstar = result["throughput"]
+-    if fstar <= 0.0 and seed < m_max:
+-        seed = m_max
+-        result = target_eval(seed)
+-        fstar = result["throughput"]
++    seed = m_max
++    fstar = target_eval(seed)["throughput"]
+     if fstar <= 0.0:
+-        return m_max
++        return m_min  # fully infeasible -> truth convention M_truth = m_min
+ 
+     threshold = (1.0 - EPS / 2.0) * fstar
+ 
+-    # Lower bracket: min(M_ITL, M_TPF) handles ttft-only where M_ITL > onset
+     lo = max(m_min, min(M_ITL, M_TPF))
+-    # Upper bracket: tighten by occupancy-gap bound (RP-2); skip for ttft-only
+-    if ttft_only_cell:
+-        hi = min(seed, m_max)
+-    else:
+-        hi = min(seed, min(3 * M_ITL, m_max))
++    U = max(M_ITL, M_TPF)
++    hi = min(seed, max(3 * U, lo + 1), m_max)
+     hi = max(lo, hi)
+ 
+     # Binary search downward: find smallest M in [lo, hi] with f(M) >= threshold

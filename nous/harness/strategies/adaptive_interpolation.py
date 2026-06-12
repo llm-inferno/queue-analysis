@@ -22,7 +22,7 @@ from ._common import ratio
 MIN_RATIO_SPREAD = 0.001
 
 
-def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
+def search(target_eval: Callable[[int], dict], params: dict, m_min: int, m_max: int) -> int:
     mid_point = (m_min + 1 + m_max) // 2
 
     r_mid = ratio(target_eval(mid_point))

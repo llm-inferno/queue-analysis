@@ -1,9 +1,0 @@
-{
-  "gate_type": "continue",
-  "summary": "After 4 iterations, the experiment has fully mapped the Pareto front for batch-size search algorithms on the queue-analysis server: the best strategy (predictor_direct) finds the optimal batch size in 5 calls or fewer with near-zero error (<0.001%), compared to 9 calls for blind binary search. The next iteration will test whether a scenario-agnostic adaptive algorithm (no pre-loaded knowledge) can approach that 5-call ceiling without requiring access to scenarios.json.",
-  "key_points": [
-    "Pareto front has exactly two non-dominated points: predictor_naive (3 calls worst-case, 2.47% throughput gap) and predictor_direct (5 calls worst-case, <0.001% gap). predictor_direct Pareto-dominates blind binary search (9 calls, same gap) and predictor_hybrid (5 calls, slightly worse gap).",
-    "All four arm predictions from iteration 4 were confirmed within measurement precision: call counts matched exactly, and gap magnitudes matched to within 0.01% of predictions. The refinement step in predictor_direct is confirmed load-bearing \u2014 removing it (predictor_naive) incurs a 2.47% throughput error on the baseline scenario.",
-    "Key open question for iteration 5: can a scenario-agnostic adaptive algorithm (e.g., exponential doubling on the R(M) ratio until R\u22651.0, then binary refinement) achieve \u22646\u20137 calls without reading scenarios.json? This would determine whether the 4-call advantage of predictor-guided search is recoverable without pre-loaded scenario knowledge, and would make the approach robust to unseen hardware configurations."
-  ]
-}

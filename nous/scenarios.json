@@ -1,45 +1,29 @@
 {
-  "constants": {
-    "alpha": 12.0,
-    "beta": 0.05,
-    "gamma": 0.0005
-  },
-  "search_range": {
-    "m_min": 1,
-    "m_max": 256
-  },
+  "search_range": { "m_min": 1, "m_max": 256 },
   "scenarios": [
-    {
-      "name": "baseline",
-      "AvgInputTokens": 256,
-      "AvgOutputTokens": 512,
-      "targetITL": 20.0,
-      "targetTTFT": 60.0,
-      "maxQueueSize": 128
-    },
-    {
-      "name": "short-tight-ttft",
-      "AvgInputTokens": 128,
-      "AvgOutputTokens": 256,
-      "targetITL": 20.0,
-      "targetTTFT": 35.0,
-      "maxQueueSize": 128
-    },
-    {
-      "name": "long-loose-itl",
-      "AvgInputTokens": 256,
-      "AvgOutputTokens": 1024,
-      "targetITL": 40.0,
-      "targetTTFT": 200.0,
-      "maxQueueSize": 128
-    },
-    {
-      "name": "small-queue",
-      "AvgInputTokens": 256,
-      "AvgOutputTokens": 512,
-      "targetITL": 20.0,
-      "targetTTFT": 60.0,
-      "maxQueueSize": 4
-    }
+    { "name": "baseline", "regime": "crossover",
+      "AvgInputTokens": 256, "AvgOutputTokens": 1024,
+      "targetITL": 20.0, "targetTTFT": 60.0, "maxQueueSize": 128,
+      "alpha": 8.0, "beta": 0.033, "gamma": 0.000333 },
+    { "name": "itl-only", "regime": "itl-only",
+      "AvgInputTokens": 256, "AvgOutputTokens": 4096,
+      "targetITL": 15.0, "targetTTFT": 400.0, "maxQueueSize": 128,
+      "alpha": 8.0, "beta": 0.033, "gamma": 0.000333 },
+    { "name": "ttft-only", "regime": "ttft-only",
+      "AvgInputTokens": 1024, "AvgOutputTokens": 256,
+      "targetITL": 60.0, "targetTTFT": 80.0, "maxQueueSize": 128,
+      "alpha": 8.0, "beta": 0.033, "gamma": 0.000333 },
+    { "name": "unbounded", "regime": "unbounded",
+      "AvgInputTokens": 64, "AvgOutputTokens": 128,
+      "targetITL": 200.0, "targetTTFT": 2000.0, "maxQueueSize": 4,
+      "alpha": 4.0, "beta": 0.017, "gamma": 0.000167 },
+    { "name": "alpha-low", "regime": "crossover",
+      "AvgInputTokens": 256, "AvgOutputTokens": 1024,
+      "targetITL": 20.0, "targetTTFT": 60.0, "maxQueueSize": 128,
+      "alpha": 4.0, "beta": 0.017, "gamma": 0.000167 },
+    { "name": "alpha-high", "regime": "crossover",
+      "AvgInputTokens": 256, "AvgOutputTokens": 1024,
+      "targetITL": 20.0, "targetTTFT": 60.0, "maxQueueSize": 128,
+      "alpha": 16.0, "beta": 0.067, "gamma": 0.000667 }
   ]
 }

@@ -1,0 +1,80 @@
+[
+  {
+    "scenario": "baseline",
+    "strategy": "naive_max",
+    "M_chosen": 256,
+    "calls": 1,
+    "throughput_chosen": 1.9229827,
+    "M_truth": 69,
+    "throughput_truth": 1.9232237,
+    "gap_throughput_rel": 0.00012531043580637954,
+    "gap_M": 187,
+    "wall_clock_seconds": 8.750066626816988e-07,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "itl-only",
+    "strategy": "naive_max",
+    "M_chosen": 256,
+    "calls": 1,
+    "throughput_chosen": 0.12572289,
+    "M_truth": 17,
+    "throughput_truth": 0.12606688,
+    "gap_throughput_rel": 0.0027286310250558155,
+    "gap_M": 239,
+    "wall_clock_seconds": 5.829933797940612e-07,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "ttft-only",
+    "strategy": "naive_max",
+    "M_chosen": 256,
+    "calls": 1,
+    "throughput_chosen": 4.522976,
+    "M_truth": 92,
+    "throughput_truth": 4.5229764,
+    "gap_throughput_rel": 8.843733967604758e-08,
+    "gap_M": 164,
+    "wall_clock_seconds": 4.169996827840805e-07,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "unbounded",
+    "strategy": "naive_max",
+    "M_chosen": 256,
+    "calls": 1,
+    "throughput_chosen": 121.4636,
+    "M_truth": 256,
+    "throughput_truth": 121.4636,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 4.5899651013314724e-07,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "alpha-low",
+    "strategy": "naive_max",
+    "M_chosen": 256,
+    "calls": 1,
+    "throughput_chosen": 5.1726604,
+    "M_truth": 170,
+    "throughput_truth": 5.173009,
+    "gap_throughput_rel": 6.738824541008671e-05,
+    "gap_M": 86,
+    "wall_clock_seconds": 5.409965524449944e-07,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "alpha-high",
+    "strategy": "naive_max",
+    "M_chosen": 256,
+    "calls": 1,
+    "throughput_chosen": 0.27971536,
+    "M_truth": 17,
+    "throughput_truth": 0.2797425,
+    "gap_throughput_rel": 9.701779314898904e-05,
+    "gap_M": 239,
+    "wall_clock_seconds": 4.169996827840805e-07,
+    "internal_solve_calls": 0
+  }
+]

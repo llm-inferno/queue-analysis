@@ -1,9 +1,0 @@
-{
-  "gate_type": "continue",
-  "summary": "Three iterations have produced a validated closed-form predictor (M_est = round(n_ITL + 3.0*sqrt(n_ITL) + 0.05*wait_budget)) that estimates the optimal batch size M* with max error = 2, enables perfect no-crossover detection, and reduces oracle calls by 44% (5 vs 9). The next iteration will implement the full hybrid strategy, which requires resolving how to pass scenario parameters (avgIn, avgOut, targetITL, targetTTFT) into the strategy interface.",
-  "key_points": [
-    "All 4 experimental arms confirmed: predictor max_error=2 (better than <=5 bound), ablation shows wait_budget term is necessary (error jumps 2\u21928 without it for long-loose-itl), sign(wait_budget) perfectly classifies crossover vs no-crossover, and the predictor-guided binary search hits exact M* in \u22645 calls for all 3 crossover scenarios.",
-    "Key mechanism understood: at the crossover rate, the queue is essentially empty (N_queue=0.016), so M* is determined by stochastic fluctuation headroom above n_ITL (the batch occupancy where decode time equals the ITL target), not by queue management \u2014 the sqrt(n_ITL) buffer term captures this.",
-    "Still unknown: (1) whether the buffer coefficients 3.0 and 0.05 generalize beyond the 3 calibration scenarios; (2) how to inject scenario params into the strategy interface (cleanest option is adding a 'scenario' argument to the search() signature); (3) whether a closed-form predictor for the plateau onset in no-crossover scenarios is achievable. Iter-4 should implement predictor_hybrid.py and run a head-to-head comparison against ratio_binary_search (9 calls) on all scenarios."
-  ]
-}

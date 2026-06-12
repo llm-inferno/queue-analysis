@@ -1,0 +1,27 @@
+"""naive_ternary: parameter-blind ternary search maximizing throughput.
+
+Ablates formula guidance while keeping search. Ignores params entirely.
+Treats throughput=0 (HTTP 400 infeasible responses) as -infinity.
+"""
+
+from __future__ import annotations
+from typing import Callable
+
+
+def search(target_eval: Callable[[int], dict], params: dict, m_min: int, m_max: int) -> int:
+    lo, hi = m_min, m_max
+    while hi - lo > 2:
+        m1 = lo + (hi - lo) // 3
+        m2 = hi - (hi - lo) // 3
+        f1 = target_eval(m1)["throughput"]
+        f2 = target_eval(m2)["throughput"]
+        if f1 < f2:
+            lo = m1
+        else:
+            hi = m2
+    best, best_val = lo, 0.0
+    for x in range(lo, hi + 1):
+        v = target_eval(x)["throughput"]
+        if v > best_val:
+            best, best_val = x, v
+    return best

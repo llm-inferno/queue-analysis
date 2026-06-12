@@ -28,18 +28,19 @@ def main() -> None:
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--m-min", type=int, default=None)
     ap.add_argument("--m-max", type=int, default=None)
+    ap.add_argument("--out-subdir", type=str, default=None,
+                    help="if set, write caches under cache-dir/<subdir>/<name>.json")
     args = ap.parse_args()
 
     config = load_campaign(args.scenarios)
     m_min = args.m_min if args.m_min is not None else config.m_min
     m_max = args.m_max if args.m_max is not None else config.m_max
-    args.cache_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = args.cache_dir / args.out_subdir if args.out_subdir else args.cache_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     with AnalyzerServer(repo_dir=args.repo_dir, port=args.port) as base_url:
         for s in config.scenarios:
-            eval_, stats = make_oracle(
-                base_url, s, alpha=config.alpha, beta=config.beta, gamma=config.gamma,
-            )
+            eval_, stats = make_oracle(base_url, s)
             curve = []
             best_m, best_t = m_min, 0.0  # 0 matches the oracle's infeasibility convention
             for m in range(m_min, m_max + 1):
@@ -50,12 +51,15 @@ def main() -> None:
                     best_t, best_m = t, m
             payload = {
                 "scenario": s.name,
+                "regime": s.regime,
                 "M_truth": best_m,
                 "throughput_truth": best_t,
                 "f_curve": curve,
             }
-            (args.cache_dir / f"truth-{s.name}.json").write_text(json.dumps(payload, indent=2))
-            print(f"[{s.name}] M*={best_m} f*={best_t:.4f}  (calls={stats.calls})")
+            target = (out_dir / f"{s.name}.json") if args.out_subdir else (out_dir / f"truth-{s.name}.json")
+            target.write_text(json.dumps(payload, indent=2))
+            warn = "  WARNING: f(M)=0 for all M — fully infeasible (every M returned 400)" if best_t <= 0.0 else ""
+            print(f"[{s.name}] M*={best_m} f*={best_t:.4f}  (calls={stats.calls}){warn}")
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ from typing import Callable
 from ._common import ratio
 
 
-def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
+def search(target_eval: Callable[[int], dict], params: dict, m_min: int, m_max: int) -> int:
     lo, hi = m_min + 1, m_max  # skip M=1 (always infeasible)
     best = m_max  # default: if no crossing found, land on plateau
 

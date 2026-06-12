@@ -1,0 +1,135 @@
+metadata:
+  iteration: 2
+  family: "regime-partition-and-boundaries"
+  research_question: >-
+    Map the regime structure of M* = argmax_M f(M): partition params-space into <=5
+    cells with closed-form boundary equations and a per-cell M-hat, using ONLY the
+    analytic primitives in nous/harness/formulas.py (itl, ttft_prefill, tau, delta) plus
+    the iter-1 bound directions (M_ITL is a lower bound on the ITL-binding M*;
+    M_TTFT_prefill is an upper bound on the TTFT-binding M*). Answer directly: are 4
+    groups enough? Iter-2 is observe: validate against formulas.py only — NO /target
+    (oracle) calls, NO truth-cache reads, NO code changes.
+
+arm_selection_rationale: >-
+  Iter-2 is a pure-analysis (observe) iteration, so every arm is a falsifiable assertion
+  on the deterministic validator's output (results/baseline.json) — no oracle, no code
+  changes. h-main states the partition itself: a signed-bracket classifier built from the
+  iter-1 bound directions cleanly resolves the unbounded and ttft-only cells and fuses the
+  rest. h-control-negative is the crux of the "are 4 groups enough?" question: it shows
+  the fused cell is IRREDUCIBLE from primitives — two differently-labelled scenarios
+  (itl-only and the alpha-low crossover) share an identical primitive signature, so the
+  effect (clean classification) vanishes exactly where the queue-wait term would be
+  needed, proving its necessity and scoping it to iter-3. h-robustness establishes that
+  the cell boundaries are closed-form in params (not empirical labels) and flip cell
+  membership at the predicted threshold under perturbation. h-ablation removes the
+  bound-direction ORDERING (M_TPF<M_ITL) and shows the resulting naive 2x2 loses the
+  ttft-only cell, establishing the ordering — not the binding booleans — as the
+  load-bearing component for the one extra split primitives CAN make. h-super-additivity
+  is omitted: there are no interacting factors to combine in a single-mechanism partition.
+
+arms:
+  - type: h-main
+    prediction: >-
+      The signed-bracket partition classifies all six dev scenarios consistently with
+      their regime labels in exactly three primitive-decidable cells. Specifically:
+      (a) the `unbounded` cell {not itl_binds and not ttft_pf_binds} contains exactly the
+      scenario labelled `unbounded`, with M-hat = M_MAX = 256; (b) the `ttft-only` cell
+      {M_TPF < M_ITL} contains exactly the scenario labelled `ttft-only`, with M-hat =
+      M_TPF (an UPPER bound on M*); (c) the remaining `itl-or-crossover` cell {M_ITL <=
+      M_TPF, at least one binds} contains only scenarios labelled `itl-only` or
+      `crossover`, with M-hat in the bracket [M_ITL, min(M_TPF,256)] and point estimate
+      M_ITL (a LOWER bound). Directionally: ttft-only is the unique cell where the TTFT
+      upper bound falls below the ITL lower bound; unbounded is the unique no-bind cell.
+    mechanism: >-
+      From iter-1 bound directions: true_TTFT_M <= M_TPF (RP-5, the queue wait only adds
+      to TTFT, raising it, so the prefill-only crossing over-estimates the TTFT-binding M)
+      and true_ITL_M >= M_ITL (RP-2, realized AvgITL averages over occupancy <= B so the
+      full-batch crossing under-estimates). Hence M_TPF < M_ITL implies true_TTFT_M <=
+      M_TPF < M_ITL <= true_ITL_M: TTFT strictly binds before ITL regardless of the
+      (unknown) queue wait, so the cell is provably ttft-only. The unbounded cell follows
+      from nc=1 affineness (RP-1): itl(256) <= targetITL means the affine itl never
+      reaches the target in [1,256], and likewise for ttft_prefill, so neither latency
+      constraint binds (formulas.py:99-102, :93-96). The fused cell is what remains.
+    diagnostic: >-
+      If a non-`ttft-only` scenario has M_TPF < M_ITL, the bound directions are violated —
+      recheck ttft_prefill monotonicity and that nc stayed at 1 (a jump changes delta and
+      can reorder the crossings). If `unbounded` shows a binding constraint, recompute
+      itl(256)/ttft_prefill(256) vs targets. If a `ttft-only`/`unbounded`-labelled
+      scenario lands in the fused cell, the queue or a non-affine nc is reordering the
+      true binding — escalate to the iter-3 oracle check.
+
+  - type: h-control-negative
+    component: "queue-wait-term"
+    prediction: >-
+      The `itl-or-crossover` cell is IRREDUCIBLE from the primitives: at least one pair of
+      dev scenarios with DIFFERENT regime labels shares an identical primitive signature
+      (itl_binds, ttft_pf_binds, sign(M_TPF - M_ITL)). Concretely `itl-only` and the
+      `alpha-low` crossover both present signature (itl_binds=1, ttft_pf_binds=0, M_TPF >
+      M_ITL) yet carry different labels, so no primitive-only classifier can separate them.
+      The clean-classification effect of h-main therefore VANISHES on the M_ITL <= M_TPF
+      side — exactly where the queue-wait term is the deciding factor. Directionally:
+      adding cells to the primitive partition cannot reduce the misclassification on this
+      side to zero; only the (oracle-computed) queue wait can.
+    mechanism: >-
+      ttft_prefill(B) deliberately excludes the M/M/1 queue wait (formulas.py:93-96 docstring;
+      full TTFT = ttft_prefill + wait, added by the solver). In `alpha-low` the wait pushes
+      true TTFT above targetTTFT at small M (so TTFT binds -> crossover) while in `itl-only`
+      the loose targetTTFT=400 keeps TTFT slack (ITL alone binds). Both have ttft_prefill
+      slack to B=256 (M_TPF=256), so the prefill primitive is blind to the difference. This
+      is the precise sense in which 4 primitive groups are NOT enough.
+    diagnostic: >-
+      If no two differently-labelled scenarios share a signature, the dev set happens to be
+      primitive-separable and the "4 groups" claim would need re-testing on a synthetic
+      pair (construct one itl-only and one crossover with matching itl_binds/ttft_pf_binds
+      and M_TPF=256). If the shared-signature scenarios turn out to share a label too, the
+      labels — not the primitives — are the issue; re-read nous/scenarios.json regime tags.
+
+  - type: h-robustness
+    prediction: >-
+      The cell boundaries are closed-form in params and exact under nc=1, and perturbing a
+      target across a boundary flips cell membership at the predicted threshold. (a) The
+      unbounded<->ITL-bound threshold targetITL* = itl(1) + (M_MAX-1)*delta(1) equals
+      itl(256) with abs error < 1e-6 on all six scenarios. (b) The ttft-only on/off
+      condition M_TPF < M_ITL holds iff targetTTFT < ttft_prefill(M_ITL) on all six. (c)
+      Lowering `baseline` targetTTFT below ttft_prefill(M_ITL=40)=28.114 moves it into the
+      ttft-only cell and raising it keeps it in itl-or-crossover — the flip occurs at the
+      closed-form threshold. Directionally, boundary location moves monotonically with the
+      target and the predicted threshold matches the brute-scan flip to within one integer
+      step.
+    mechanism: >-
+      Under nc=1 (RP-1/RP-4) delta is constant in B, so itl(B)=itl(1)+(B-1)*delta and
+      ttft_prefill(B)=ttft_prefill(1)+(B-1)*delta_pf are exactly affine (formulas.py:72-76,
+      :89-90). Affine inversion gives the ITL-unbounded threshold in closed form, and
+      because ttft_prefill is strictly increasing, M_TPF < M_ITL is equivalent to
+      ttft_prefill(M_ITL) > targetTTFT (the largest feasible B for TTFT lies below M_ITL).
+      These are algebraic identities, hence exact and perturbation-stable.
+    diagnostic: >-
+      If abs error on boundary (a) exceeds 1e-6, nc jumped within [1,256] for that
+      scenario (delta no longer constant) — check num_iterations_per_prefill. If the
+      ttft-only iff fails, ttft_prefill lost monotonicity (recheck the max(0,.) floor at
+      small B, formulas.py:89-90) or M_ITL hit the clamp. If the perturbation does not
+      flip at the threshold, the chosen scenario's M_ITL changed under the perturbation
+      (it should not — targetTTFT does not enter itl).
+
+  - type: h-ablation
+    component: "bound-direction-ordering"
+    prediction: >-
+      Removing the bound-direction ordering (M_TPF < M_ITL) and classifying from the two
+      binding booleans alone (naive 2x2: (itl_binds, ttft_pf_binds) -> {unbounded,
+      itl-only, ttft-only, crossover}) misclassifies the `ttft-only` scenario as
+      `crossover` (it has itl_binds=1 AND ttft_pf_binds=1), whereas the signed partition
+      with the ordering recovers it. Removing the ordering therefore loses the one extra
+      split the primitives CAN make. Directionally, the naive 2x2 produces strictly more
+      label mismatches than the signed partition on the dev set.
+    mechanism: >-
+      The naive 2x2 keys only on whether each constraint binds somewhere in [1,256], not
+      on the ORDER in which they bind. `ttft-only` binds on both (itl(256)=148>60 and
+      ttft_prefill(256)=182>80) so the boolean classifier calls it crossover; only the
+      relative position M_TPF=70 < M_ITL=95 reveals TTFT binds first. The ordering encodes
+      the RP-2/RP-5 bound directions, which the booleans discard.
+    diagnostic: >-
+      If the naive 2x2 does NOT misclassify ttft-only, recompute itl(256) and
+      ttft_prefill(256) vs the targets — one of the binding booleans is being read wrong.
+      If the signed partition ALSO misclassifies it, the M_TPF/M_ITL brute scans disagree
+      with the binding booleans (a clamp or off-by-one at B=256); reconcile the
+      largest-feasible-B logic with the >target test at B=256.

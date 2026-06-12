@@ -13,7 +13,7 @@ from typing import Callable
 from ._common import ratio
 
 
-def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
+def search(target_eval: Callable[[int], dict], params: dict, m_min: int, m_max: int) -> int:
     r_top = ratio(target_eval(m_max))
     if r_top < 1.0:
         return m_max

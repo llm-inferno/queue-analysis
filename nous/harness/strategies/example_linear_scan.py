@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Callable
 
 
-def search(target_eval: Callable[[int], dict], m_min: int, m_max: int) -> int:
+def search(target_eval: Callable[[int], dict], params: dict, m_min: int, m_max: int) -> int:
     """Return the M in [m_min, m_max] with the highest throughput."""
     best_m = m_min
     best_t = -1.0

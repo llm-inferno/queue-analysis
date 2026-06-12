@@ -1,0 +1,205 @@
+{
+  "iterations": [
+    {
+      "iteration": 0,
+      "family": "baseline",
+      "timestamp": "1970-01-01T00:00:00Z",
+      "candidate_id": "baseline",
+      "h_main_result": null,
+      "ablation_results": {},
+      "control_result": null,
+      "robustness_result": null,
+      "prediction_accuracy": null,
+      "principles_extracted": [],
+      "frontier_update": null
+    },
+    {
+      "iteration": 1,
+      "family": "closed-form-Mhat-derivation",
+      "timestamp": "2026-06-11T21:34:43.937279+00:00",
+      "candidate_id": "iter-1",
+      "h_main_result": "CONFIRMED",
+      "ablation_results": {
+        "ablation-0": "CONFIRMED"
+      },
+      "control_result": "CONFIRMED",
+      "robustness_result": "CONFIRMED",
+      "prediction_accuracy": {
+        "arms_correct": 4,
+        "arms_total": 4,
+        "accuracy_pct": 100.0
+      },
+      "principles_extracted": [
+        {
+          "id": "RP-1",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-2",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-3",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-4",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-5",
+          "action": "INSERT"
+        }
+      ],
+      "frontier_update": null
+    },
+    {
+      "iteration": 2,
+      "family": "regime-partition-and-boundaries",
+      "timestamp": "2026-06-11T23:38:11.022777+00:00",
+      "candidate_id": "iter-2",
+      "h_main_result": "CONFIRMED",
+      "ablation_results": {
+        "ablation-0": "CONFIRMED"
+      },
+      "control_result": "CONFIRMED",
+      "robustness_result": "CONFIRMED",
+      "prediction_accuracy": {
+        "arms_correct": 4,
+        "arms_total": 4,
+        "accuracy_pct": 100.0
+      },
+      "principles_extracted": [
+        {
+          "id": "RP-1",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-2",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-5",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-6",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-7",
+          "action": "INSERT"
+        }
+      ],
+      "frontier_update": null
+    },
+    {
+      "iteration": 3,
+      "family": "oracle-validated-endpoint-predictor",
+      "timestamp": "2026-06-12T00:31:04.748322+00:00",
+      "candidate_id": "iter-3",
+      "h_main_result": "CONFIRMED",
+      "ablation_results": {
+        "ablation-0": "CONFIRMED"
+      },
+      "control_result": "CONFIRMED",
+      "robustness_result": "CONFIRMED",
+      "prediction_accuracy": {
+        "arms_correct": 4,
+        "arms_total": 4,
+        "accuracy_pct": 100.0
+      },
+      "principles_extracted": [
+        {
+          "id": "RP-2",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-3",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-5",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-8",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-9",
+          "action": "INSERT"
+        }
+      ],
+      "frontier_update": null
+    },
+    {
+      "iteration": 4,
+      "family": "concurrency-optimal-formula-guided-onset-search",
+      "timestamp": "2026-06-12T12:04:25.890808+00:00",
+      "candidate_id": "iter-4",
+      "h_main_result": "CONFIRMED",
+      "ablation_results": {
+        "ablation-0": "CONFIRMED"
+      },
+      "control_result": "CONFIRMED",
+      "robustness_result": "CONFIRMED",
+      "prediction_accuracy": {
+        "arms_correct": 4,
+        "arms_total": 4,
+        "accuracy_pct": 100.0
+      },
+      "principles_extracted": [
+        {
+          "id": "RP-8",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-9",
+          "action": "INSERT"
+        }
+      ],
+      "frontier_update": null
+    },
+    {
+      "iteration": 5,
+      "family": "benchmark-generalization-of-formula-guided-onset-search",
+      "timestamp": "2026-06-12T13:34:02.521300+00:00",
+      "candidate_id": "iter-5",
+      "h_main_result": "CONFIRMED",
+      "ablation_results": {
+        "ablation-0": "CONFIRMED"
+      },
+      "control_result": "CONFIRMED",
+      "robustness_result": "CONFIRMED",
+      "prediction_accuracy": {
+        "arms_correct": 4,
+        "arms_total": 4,
+        "accuracy_pct": 100.0
+      },
+      "principles_extracted": [
+        {
+          "id": "RP-2",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-3",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-8",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-10",
+          "action": "INSERT"
+        },
+        {
+          "id": "RP-11",
+          "action": "INSERT"
+        }
+      ],
+      "frontier_update": null
+    }
+  ]
+}

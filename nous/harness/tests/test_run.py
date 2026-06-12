@@ -8,10 +8,10 @@ from nous.harness.scenarios import Scenario
 
 def test_load_strategy_module_returns_callable_search(tmp_path):
     strat = tmp_path / "s.py"
-    strat.write_text("def search(target_eval, m_min, m_max):\n    return 5\n")
+    strat.write_text("def search(target_eval, params, m_min, m_max):\n    return 5\n")
     fn = run_module.load_strategy(strat)
     assert callable(fn)
-    assert fn(None, 1, 10) == 5
+    assert fn(None, {}, 1, 10) == 5
 
 
 def test_load_strategy_rejects_module_without_search(tmp_path):
@@ -29,7 +29,8 @@ def test_run_strategy_on_scenario_uses_oracle_and_truth(monkeypatch):
     makes one extra confirmatory eval_(m_chosen) call, so total calls == 10.
     """
     s = Scenario(name="x", avg_input_tokens=1, avg_output_tokens=1,
-                 target_itl=10.0, target_ttft=10.0, max_queue_size=10)
+                 target_itl=10.0, target_ttft=10.0, max_queue_size=10,
+                 alpha=12.0, beta=0.05, gamma=0.0005, regime="crossover")
 
     def fake_make_oracle(base_url, scenario, **kw):
         from nous.harness.oracle import OracleStats
@@ -41,7 +42,7 @@ def test_run_strategy_on_scenario_uses_oracle_and_truth(monkeypatch):
     monkeypatch.setattr(run_module, "make_oracle", fake_make_oracle)
 
     truth = {"M_truth": 5, "throughput_truth": 25.0}
-    def strategy_search(eval_, m_min, m_max):
+    def strategy_search(eval_, params, m_min, m_max):
         best, bv = m_min, -1
         for m in range(m_min, m_max + 1):
             v = eval_(m)["throughput"]
@@ -65,7 +66,8 @@ def test_run_strategy_on_scenario_uses_oracle_and_truth(monkeypatch):
 def test_run_strategy_rejects_out_of_range_M(monkeypatch):
     """The harness must raise if a strategy returns M outside [m_min, m_max]."""
     s = Scenario(name="x", avg_input_tokens=1, avg_output_tokens=1,
-                 target_itl=10.0, target_ttft=10.0, max_queue_size=10)
+                 target_itl=10.0, target_ttft=10.0, max_queue_size=10,
+                 alpha=12.0, beta=0.05, gamma=0.0005, regime="crossover")
 
     def fake_make_oracle(base_url, scenario, **kw):
         from nous.harness.oracle import OracleStats
@@ -76,7 +78,7 @@ def test_run_strategy_rejects_out_of_range_M(monkeypatch):
         return eval_, stats
     monkeypatch.setattr(run_module, "make_oracle", fake_make_oracle)
 
-    def bad_strategy(eval_, m_min, m_max):
+    def bad_strategy(eval_, params, m_min, m_max):
         return m_max + 1  # off-the-end
 
     truth = {"M_truth": 5, "throughput_truth": 1.0}

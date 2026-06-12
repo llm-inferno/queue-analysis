@@ -1,0 +1,13 @@
+"""naive_max: return m_max unconditionally (no formula, no search).
+
+The plateau-flatness control. Under nc=1 the saturation throughput S(B) is
+concave-increasing and f(M) never decreases past its peak, so m_max sits on
+the f-plateau. Costs exactly 1 oracle call (the harness confirmatory eval).
+"""
+
+from __future__ import annotations
+from typing import Callable
+
+
+def search(target_eval: Callable[[int], dict], params: dict, m_min: int, m_max: int) -> int:
+    return m_max

@@ -1,0 +1,75 @@
+metadata:
+  iteration: 3
+  bundle_ref: "runs/iter-3/bundle.yaml"
+  description: >-
+    Iter-3 is an observe+oracle iteration. Three standalone strategy files
+    (seed_upper, seed_lower, naive_max) are each run through python -m nous.harness.run,
+    which spawns the Go server, calls /target, and scores against truth caches.
+    No code changes to the target repo or nous/harness/. The Pareto axes are
+    (calls, gap_throughput_rel). Validates the iter-2 per-cell M-hat against the
+    live oracle and confirms which bracket endpoint minimizes gap_throughput_rel.
+
+setup:
+  - cmd: "source nous/.venv/bin/activate"
+    description: "Activate the nous virtual environment (provides formulas.py, run.py, oracle.py)"
+
+arms:
+  - arm_id: "h-main"
+    conditions:
+      - name: "seed_upper"
+        cmd: >-
+          source nous/.venv/bin/activate &&
+          python -m nous.harness.run
+          --scenarios nous/scenarios.json
+          --strategy .nous/queue-throughput-formulas/runs/iter-3/inputs/seed_upper.py
+          --m-min 1 --m-max 256
+          --out .nous/queue-throughput-formulas/runs/iter-3/results/smoke_seed_upper.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-3/results/smoke_seed_upper.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-3/inputs/seed_upper.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"
+
+  - arm_id: "h-ablation"
+    conditions:
+      - name: "seed_lower"
+        cmd: >-
+          source nous/.venv/bin/activate &&
+          python -m nous.harness.run
+          --scenarios nous/scenarios.json
+          --strategy .nous/queue-throughput-formulas/runs/iter-3/inputs/seed_lower.py
+          --m-min 1 --m-max 256
+          --out .nous/queue-throughput-formulas/runs/iter-3/results/smoke_seed_lower.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-3/results/smoke_seed_lower.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-3/inputs/seed_lower.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"
+
+  - arm_id: "h-control-negative"
+    conditions:
+      - name: "naive_max"
+        cmd: >-
+          source nous/.venv/bin/activate &&
+          python -m nous.harness.run
+          --scenarios nous/scenarios.json
+          --strategy .nous/queue-throughput-formulas/runs/iter-3/inputs/naive_max.py
+          --m-min 1 --m-max 256
+          --out .nous/queue-throughput-formulas/runs/iter-3/results/smoke_naive_max.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-3/results/smoke_naive_max.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-3/inputs/naive_max.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"
+
+  - arm_id: "h-robustness"
+    conditions:
+      - name: "seed_upper_ttft_only"
+        cmd: >-
+          source nous/.venv/bin/activate &&
+          python -m nous.harness.run
+          --scenarios nous/scenarios.json
+          --strategy .nous/queue-throughput-formulas/runs/iter-3/inputs/seed_upper.py
+          --m-min 1 --m-max 256
+          --out .nous/queue-throughput-formulas/runs/iter-3/results/smoke_seed_upper.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-3/results/smoke_seed_upper.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-3/inputs/seed_upper.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"

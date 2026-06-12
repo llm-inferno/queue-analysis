@@ -1,0 +1,41 @@
+{
+  "iteration": 4,
+  "bundle_ref": "runs/iter-4/bundle.yaml",
+  "arms": [
+    {
+      "arm_type": "h-main",
+      "predicted": "formula_guided locates the plateau-onset M* on all six dev scenarios with worst-case gap_M strictly below both baselines (naive_max 239, naive_ternary ~127). Offline sim: worst gap_M ~22 (ttft-only), <=9 elsewhere. Simultaneously holds gap_f <= epsilon on every scenario at calls <= 8.",
+      "observed": "All six dev scenarios: worst gap_M=20 (ttft-only: M=72, M*=92), gap_M=9 (alpha-low: M=161, M*=170), gap_M=2 (baseline: M=67, M*=69), gap_M=1 (alpha-high: M=16, M*=17), gap_M=0 (itl-only, unbounded). Worst gap_f=0.0101 (baseline), all other scenarios gap_f < 0.011. Max calls=8 (baseline, ttft-only, alpha-low). Gap_M=20 strictly beats naive_max (239) and naive_ternary (127).",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "Worst gap_M=20 is slightly better than offline sim prediction of ~22 (due to exact cache vs approximation). Max calls=8 exactly meets the <=8 gate — MAX_ITERS=6 cap plus seed+confirmatory=2 sums to 8 for the widest brackets (baseline, ttft-only, alpha-low)."
+    },
+    {
+      "arm_type": "h-control-negative",
+      "predicted": "naive_max returns M=256 on every dev scenario: gap_f <= 0.0027 (throughput-perfect) at exactly 1 call, BUT gap_M is maximal — worst 239 (itl-only, alpha-high), >=86 on every binding scenario, 0 only on unbounded.",
+      "observed": "Exactly as predicted: all 6 scenarios M_chosen=256, calls=1. Worst gap_f=0.0027 (itl-only), worst gap_M=239 (itl-only and alpha-high), gap_M=86 (alpha-low), gap_M=164 (ttft-only), gap_M=187 (baseline), gap_M=0 (unbounded). Confirms that gap_f cannot discriminate quality — naive_max ties or beats all strategies on the throughput axis.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "Numbers match the iter-4 baseline validation table exactly. Confirms gap_f is a degenerate scoring axis on this dev set."
+    },
+    {
+      "arm_type": "h-ablation",
+      "predicted": "naive_ternary (generic search, no formula) lands on the plateau (gap_f <= epsilon) but NOT the onset: worst gap_M ~127 (ttft-only, lands ~219), ~25-30 calls.",
+      "observed": "All 6 scenarios: gap_f near zero (worst 0.0001 on alpha-high), calls=30 for all scenarios. ttft-only: M_chosen=219 (M*=92), gap_M=127. alpha-high: M_chosen=40 (M*=17), gap_M=23. Other four: gap_M=0 (convergence to onset by coincidence on those scenarios). Worst gap_M=127. Exactly matches offline sim prediction.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "The ternary search converges to an interior plateau point on ttft-only and alpha-high because the plateau is wide there, while on the other four it coincidentally converges near the onset (narrow or steep-plateau scenarios). This isolates that formula guidance — not search per se — is the differentiator."
+    },
+    {
+      "arm_type": "h-robustness",
+      "predicted": "On ttft-only, cell-aware HIGH seeding (M_TPF=70 < M_ITL=95 triggers seed=m_max=256) prevents f* from being underestimated at U=70, keeping the search from collapsing to ~56 (gap_M~36). Expected: gap_M ~22, strictly below both baselines on ttft-only.",
+      "observed": "ttft-only result: M_chosen=72 (M*=92), gap_M=20, calls=8, gap_f=0.0005. Confirmed: M_TPF=70 < M_ITL=95 triggered seed=m_max=256; f* was probed at 256 (on plateau), threshold set at 0.99*f(256)~peak. Binary search [lo=70, hi=256, MAX_ITERS=6] converged to M=72. Gap_M=20 < 22 (prediction) and strictly below naive_max(164) and naive_ternary(127) on ttft-only.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "Gap_M=20 is slightly better than predicted ~22 due to binary search finding M=72 (vs predicted ~70). The lower bracket was correctly floored at min(M_ITL=95, M_TPF=70)=70. Without the HIGH seed, the descent would have used f*=f(70) and stopped at M~56 (gap_M~36); the high seed is the critical mechanism here."
+    }
+  ],
+  "experiment_valid": true,
+  "discrepancy_analysis": "All four arms confirmed. formula_guided (h-main) achieves the headline results: worst gap_M=20 (ttft-only) vs naive_max worst 239 and naive_ternary worst 127 — a factor ~6x and ~6x improvement respectively. Max calls=8 exactly meets the engineering gate. Worst gap_f=0.0101 < epsilon=0.02. The two minor discrepancies from sim predictions are both favorable: (1) actual worst gap_M=20 vs predicted ~22; (2) actual worst gap_M for naive_ternary=127 exactly matches prediction. The MAX_ITERS=6 cap combined with occupancy-gap bracket tightening (hi=min(seed, 3*M_ITL)) is the engineering solution that keeps calls<=8 on all 6 scenarios.",
+  "dominant_component_pct": null
+}

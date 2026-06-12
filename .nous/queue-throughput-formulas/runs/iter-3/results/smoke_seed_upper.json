@@ -1,0 +1,80 @@
+[
+  {
+    "scenario": "baseline",
+    "strategy": "seed_upper",
+    "M_chosen": 147,
+    "calls": 1,
+    "throughput_chosen": 1.9229842,
+    "M_truth": 69,
+    "throughput_truth": 1.9232237,
+    "gap_throughput_rel": 0.00012453049533456254,
+    "gap_M": 78,
+    "wall_clock_seconds": 0.0007757499988656491,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "itl-only",
+    "strategy": "seed_upper",
+    "M_chosen": 256,
+    "calls": 1,
+    "throughput_chosen": 0.12572289,
+    "M_truth": 17,
+    "throughput_truth": 0.12606688,
+    "gap_throughput_rel": 0.0027286310250558155,
+    "gap_M": 239,
+    "wall_clock_seconds": 0.0007981659946381114,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "ttft-only",
+    "strategy": "seed_upper",
+    "M_chosen": 70,
+    "calls": 1,
+    "throughput_chosen": 4.518968,
+    "M_truth": 92,
+    "throughput_truth": 4.5229764,
+    "gap_throughput_rel": 0.000886230580376237,
+    "gap_M": 22,
+    "wall_clock_seconds": 0.0008020000022952445,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "unbounded",
+    "strategy": "seed_upper",
+    "M_chosen": 256,
+    "calls": 1,
+    "throughput_chosen": 121.4636,
+    "M_truth": 256,
+    "throughput_truth": 121.4636,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.0008090420014923438,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "alpha-low",
+    "strategy": "seed_upper",
+    "M_chosen": 256,
+    "calls": 1,
+    "throughput_chosen": 5.1726604,
+    "M_truth": 170,
+    "throughput_truth": 5.173009,
+    "gap_throughput_rel": 6.738824541008671e-05,
+    "gap_M": 86,
+    "wall_clock_seconds": 0.0008180420045391656,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "alpha-high",
+    "strategy": "seed_upper",
+    "M_chosen": 45,
+    "calls": 1,
+    "throughput_chosen": 0.27971628,
+    "M_truth": 17,
+    "throughput_truth": 0.2797425,
+    "gap_throughput_rel": 9.372905439831712e-05,
+    "gap_M": 28,
+    "wall_clock_seconds": 0.0008334579979418777,
+    "internal_solve_calls": 0
+  }
+]

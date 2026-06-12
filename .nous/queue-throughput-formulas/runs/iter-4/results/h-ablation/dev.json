@@ -1,0 +1,80 @@
+[
+  {
+    "scenario": "baseline",
+    "strategy": "naive_ternary",
+    "M_chosen": 69,
+    "calls": 30,
+    "throughput_chosen": 1.9232237,
+    "M_truth": 69,
+    "throughput_truth": 1.9232237,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.05902975000208244,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "itl-only",
+    "strategy": "naive_ternary",
+    "M_chosen": 17,
+    "calls": 30,
+    "throughput_chosen": 0.12606688,
+    "M_truth": 17,
+    "throughput_truth": 0.12606688,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.037854459005757235,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "ttft-only",
+    "strategy": "naive_ternary",
+    "M_chosen": 219,
+    "calls": 30,
+    "throughput_chosen": 4.5229754,
+    "M_truth": 92,
+    "throughput_truth": 4.5229764,
+    "gap_throughput_rel": 2.2109334909193378e-07,
+    "gap_M": 127,
+    "wall_clock_seconds": 0.03285479100304656,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "unbounded",
+    "strategy": "naive_ternary",
+    "M_chosen": 256,
+    "calls": 30,
+    "throughput_chosen": 121.4636,
+    "M_truth": 256,
+    "throughput_truth": 121.4636,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.027879582994501106,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "alpha-low",
+    "strategy": "naive_ternary",
+    "M_chosen": 170,
+    "calls": 30,
+    "throughput_chosen": 5.173009,
+    "M_truth": 170,
+    "throughput_truth": 5.173009,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.03861979200155474,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "alpha-high",
+    "strategy": "naive_ternary",
+    "M_chosen": 40,
+    "calls": 30,
+    "throughput_chosen": 0.27971652,
+    "M_truth": 17,
+    "throughput_truth": 0.2797425,
+    "gap_throughput_rel": 9.287112255013456e-05,
+    "gap_M": 23,
+    "wall_clock_seconds": 0.03245200001401827,
+    "internal_solve_calls": 0
+  }
+]
