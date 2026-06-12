@@ -41,3 +41,37 @@ supplies the structural reason the shape is general.
            two-phase shape recurs; the onset $M^\ast$ (dotted) varies widely.}
   \label{fig:overlay-fM}
 \end{figure}
+
+\subsection{The structural cause: a minimum of binding constraints}
+\label{sec:min-constraints}
+
+The queueing model of Ramani and Tantawi~\cite{ramani2026queueing} represents the server
+as a state-dependent M/M/1 queue with a three-parameter service model: a per-iteration
+overhead $\alpha$, a per-token compute slope $\beta$, and a per-token KV-cache-access
+slope $\gamma$. Each SLO caps the admissible arrival rate at a given $M$, yielding two
+constraint curves $\lambda^\ast_{\mathrm{TTFT}}(M)$ and $\lambda^\ast_{\mathrm{ITL}}(M)$
+(the \texttt{RPSTargetTTFT} and \texttt{RPSTargetITL} outputs of the analyzer). The
+feasible request rate is their lower envelope:
+\begin{equation}
+  f(M) \;=\; \min\bigl(\lambda^\ast_{\mathrm{TTFT}}(M),\,
+                       \lambda^\ast_{\mathrm{ITL}}(M)\bigr).
+  \label{eq:min-constraints}
+\end{equation}
+
+The two-phase shape follows from the asymmetry of the two curves. The per-iteration
+saturation throughput $S(B) = 1000\,B/\tau(B)$ is concave and increasing in the batch
+occupancy $B$, approaching an analytic ceiling $S_\infty$ from below; consequently
+$\lambda^\ast_{\mathrm{ITL}}(M)$ rises to and settles at a plateau (bounded above),
+while $\lambda^\ast_{\mathrm{TTFT}}(M)$ keeps rising over the range of interest. Below
+the crossing the TTFT constraint binds and $f$ rises; above it the (plateaued) ITL
+constraint binds and $f$ flattens. Figure~\ref{fig:min-constraints} shows the
+decomposition for the baseline.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\linewidth]{fig3_min_constraints}
+  \caption{Min-of-constraints decomposition for the baseline. Below $M^\ast$ the TTFT
+           constraint binds; above it the plateaued ITL constraint binds. $f(M)$ is the
+           lower envelope of Eq.~\eqref{eq:min-constraints}.}
+  \label{fig:min-constraints}
+\end{figure}
