@@ -1,0 +1,14 @@
+\begin{table}[t]
+  \centering
+  \caption{Onset-search accuracy and cost over the 25 feasible benchmark scenarios (worst / mean). $\mathrm{gap}_{\mathrm{onset}}=|\hat M - M^\ast|$ is measured against the $\varepsilon$-onset (the objective); $\mathrm{gap}_{\mathrm{argmax}}$ against the strict throughput argmax (campaign convention; its floor is structural, RP-10). $\mathrm{gap}_f$ is the relative throughput shortfall; the SLO tolerance is $\varepsilon=0.02$. Only Formula-guided is simultaneously cheap, SLO-feasible, and near-onset.}
+  \label{tab:eval-comparison}
+  \begin{tabular}{lrrrr}
+    \toprule
+    Strategy & calls & $\mathrm{gap}_{\mathrm{onset}}$ (worst/mean) & $\mathrm{gap}_f$ (worst) & $\mathrm{gap}_{\mathrm{argmax}}$ (worst) \\
+    \midrule
+    Formula-guided & 8 & 38/7.6 & 0.0138~\checkmark & 72 \\
+    Parameter-blind ternary & 30 & 155/69.6 & 0.0286~$\times$ & 145 \\
+    Naive-max & 1 & 251/180.2 & 0.0286~$\times$ & 251 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
