@@ -1,5 +1,9 @@
 \section{Analysis: The Shape of $f(M)$}
 \label{sec:analysis}
 
-% Drafted subsection-by-subsection.
-% See docs/superpowers/specs/2026-06-10-paper-analysis-section-design.md
+We characterise $f(M)$, the maximum request rate that meets both latency SLOs
+(average TTFT and average ITL) at maximum batch size $M$, and derive the structural
+facts the scheduling algorithm exploits. Our claims are empirical across six scenarios
+and structural via the queueing model of Ramani and Tantawi~\cite{ramani2026queueing};
+the empirical breadth is limited, and the structural argument is the load-bearing one
+for generality.
