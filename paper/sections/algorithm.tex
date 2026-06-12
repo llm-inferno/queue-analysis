@@ -21,6 +21,8 @@ the occupancy-gap trap (\textbf{P4}). Algorithm~\ref{alg:onset} states the proce
 
 \begin{algorithm}[t]
   \DontPrintSemicolon
+  \SetKwFunction{FBisect}{Bisect}
+  \SetKwProg{Fn}{Function}{:}{}
   \KwIn{params; oracle $f(\cdot)$; bounds $m_{\min}, m_{\max}$; tolerance $\varepsilon$}
   \KwOut{onset estimate $\hat M \in [m_{\min}, m_{\max}]$}
   $M_{\mathrm{ITL}} \leftarrow$ largest $B$ with $\mathrm{itl}(B) \le \mathrm{targetITL}$
@@ -44,14 +46,23 @@ the occupancy-gap trap (\textbf{P4}). Algorithm~\ref{alg:onset} states the proce
     $\mathit{hi} \leftarrow \min(\mathit{seed},\, 3 M_{\mathrm{ITL}},\, m_{\max})$
       \tcp*{occupancy-gap bound}
   }
-  $\mathit{hi} \leftarrow \max(\mathit{lo}, \mathit{hi})$;\quad $i \leftarrow 0$\;
-  \While{$\mathit{lo} < \mathit{hi}$ \textbf{and} $i < \textsc{MaxIters}$}{
-    $\mathit{mid} \leftarrow \lfloor (\mathit{lo}+\mathit{hi})/2 \rfloor$\;
-    \eIf{$f(\mathit{mid}) \ge \theta$}{$\mathit{hi} \leftarrow \mathit{mid}$}{$\mathit{lo} \leftarrow \mathit{mid}+1$}
-    $i \leftarrow i + 1$\;
+  $\mathit{hi} \leftarrow \max(\mathit{lo}, \mathit{hi})$\;
+  \Return \FBisect{$f$, $\theta$, $\mathit{lo}$, $\mathit{hi}$}
+    \tcp*{$\mathit{lo},\mathit{hi}\in[m_{\min},m_{\max}]$ by construction}
+  \BlankLine
+  \Fn{\FBisect{$f$, $\theta$, $\mathit{lo}$, $\mathit{hi}$}}{
+    \tcp{smallest $M\in[\mathit{lo},\mathit{hi}]$ with $f(M)\ge\theta$, in $\le\textsc{MaxIters}$ probes}
+    $i \leftarrow 0$\;
+    \While{$\mathit{lo} < \mathit{hi}$ \textbf{and} $i < \textsc{MaxIters}$}{
+      $\mathit{mid} \leftarrow \lfloor (\mathit{lo}+\mathit{hi})/2 \rfloor$\;
+      \eIf{$f(\mathit{mid}) \ge \theta$}{$\mathit{hi} \leftarrow \mathit{mid}$}{$\mathit{lo} \leftarrow \mathit{mid}+1$}
+      $i \leftarrow i + 1$\;
+    }
+    \Return $\mathit{hi}$\;
   }
-  \Return $\mathrm{clamp}(\mathit{hi}, m_{\min}, m_{\max})$\;
-  \caption{\textsc{FormulaGuidedOnsetSearch} ($\textsc{MaxIters}=6$)}
+  \caption{\textsc{FormulaGuidedOnsetSearch} ($\textsc{MaxIters}=6$); the
+           bracketed search is \textsc{Bisect}, a bounded monotone-predicate
+           binary search.}
   \label{alg:onset}
 \end{algorithm}
 
@@ -124,9 +135,9 @@ whenever the seed is feasible, as on every benchmark scenario (RP-8). The search
 $O(\log m_{\max})$ (\textbf{P3}).
 
 \paragraph{Correctness.}
-Because $f$ is non-decreasing to a plateau (\textbf{P3}), the downward monotone-predicate
-search returns the smallest $M$ in the bracket with $f(M) \ge \theta$, so the result meets
-the near-peak objective of Eq.~\eqref{eq:objective}. The single high anchor is safe while
+Because $f$ is non-decreasing to a plateau (\textbf{P3}), \textsc{Bisect} returns the
+smallest $M$ in the bracket with $f(M) \ge \theta$, so the result meets the near-peak
+objective of Eq.~\eqref{eq:objective}. The single high anchor is safe while
 the post-peak decline of $f$ stays below $\varepsilon/2$ (\S\ref{sec:search}); under
 chunk-count jumps that produce a larger decline, a multi-probe $f^\ast$ would be required
 (left to future work).
