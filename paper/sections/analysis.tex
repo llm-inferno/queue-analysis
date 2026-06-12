@@ -75,3 +75,28 @@ decomposition for the baseline.
            lower envelope of Eq.~\eqref{eq:min-constraints}.}
   \label{fig:min-constraints}
 \end{figure}
+
+\subsection{A closed-form lower bound: $M_{\mathrm{ITL}}$}
+\label{sec:mitl}
+
+When the number of prefill chunks $nc(B)=1$ for all $B\in[1,M_{\max}]$ --- which holds
+on all six scenarios --- the per-token latency $\mathrm{itl}(B)$ is exactly affine in
+$B$ with slope $\delta = (w_{\mathrm{prefill}}(1)+w_{\mathrm{decode}})/(1+m_{\mathrm{out}})$.
+Inverting the ITL target then gives a closed-form ITL-binding batch size
+\begin{equation}
+  M_{\mathrm{ITL}} \;=\; \mathrm{clamp}\!\left(
+    \left\lfloor 1 + \frac{\mathrm{targetITL} - \mathrm{itl}(1)}{\delta}\right\rfloor,
+    \,1,\,M_{\max}\right),
+  \label{eq:mitl}
+\end{equation}
+which matches a brute-force scan with zero discrepancy. For the baseline
+($\mathrm{itl}(1)\approx 8.29$, $\delta\approx 0.297$), Eq.~\eqref{eq:mitl} gives
+$M_{\mathrm{ITL}} = 40$.
+
+$M_{\mathrm{ITL}}$ is a \emph{lower bound} on the onset, not the onset itself. Realised
+average ITL averages over occupancies at or below $B$, so
+$\mathrm{AvgITL} \le \mathrm{itl}(B)$; the ITL SLO is therefore met at batch sizes above
+$M_{\mathrm{ITL}}$, and the true onset lies higher
+(Table~\ref{tab:lower-bound-regime}: $M^\ast=69 > 40$ for the baseline). The closed form
+requires $nc=1$; under chunk-count jumps $\mathrm{itl}$ becomes piecewise-affine and a
+single-slope inversion errs by up to one step --- outside the scope of these scenarios.
