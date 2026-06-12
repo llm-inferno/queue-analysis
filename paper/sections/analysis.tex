@@ -6,7 +6,10 @@ We characterise $f(M)$, the maximum request rate that meets both latency SLOs
 facts the scheduling algorithm exploits. Our claims are empirical across six scenarios
 and structural via the queueing model of Ramani and Tantawi~\cite{ramani2026queueing};
 the empirical breadth is limited, and the structural argument is the load-bearing one
-for generality.
+for generality. Throughout, $f(M)$ is evaluated with the analytic queueing model rather
+than measured on a live server, so the claims inherit the model's assumptions
+(Markovian arrivals, the three-parameter service model, and $nc=1$ over the batch
+range); validating them on a real vLLM server is future work.
 
 \subsection{A two-phase curve}
 \label{sec:shape}
