@@ -82,7 +82,30 @@ def fig1_baseline_fM():
     ax.set_ylim(0, f_star * 1.15)
     fig.savefig(FIG_DIR / "fig1_baseline_fM.pdf")
     plt.close(fig)
-def fig2_overlay_fM(): pass
+def fig2_overlay_fM():
+    fig, ax = plt.subplots(figsize=(5.8, 3.6))
+    seen_regimes = set()
+    for name in SCENARIOS:
+        truth = load_truth(name)
+        regime = truth["regime"]
+        color = REGIME_COLOR.get(regime, "C4")
+        ms = np.array([pt["m"] for pt in truth["f_curve"]])
+        fs = np.array([pt["throughput"] for pt in truth["f_curve"]])
+        f_star = truth["throughput_truth"]
+        norm = fs / f_star if f_star > 0 else fs
+        # One legend entry per regime; scenarios in a regime share color.
+        label = regime if regime not in seen_regimes else None
+        seen_regimes.add(regime)
+        ax.plot(ms, norm, color=color, alpha=0.9, label=label)
+        ax.axvline(truth["M_truth"], color=color, linestyle=":", linewidth=0.8, alpha=0.5)
+    ax.axhline(1.0, color="gray", linewidth=0.6, alpha=0.5)
+    ax.set_xlabel("MaxBatchSize $M$")
+    ax.set_ylabel(r"$f(M)/f^*$ (normalized)")
+    ax.set_xlim(0, M_MAX)
+    ax.set_ylim(0, 1.1)
+    ax.legend(loc="lower right", framealpha=0.9, title="regime")
+    fig.savefig(FIG_DIR / "fig2_overlay_fM.pdf")
+    plt.close(fig)
 def fig3_min_constraints(): pass
 def fig4_lower_bound_bracket(): pass
 def tab1_lower_bound_regime(): pass
