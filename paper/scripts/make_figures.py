@@ -179,13 +179,14 @@ def fig5_onset_search():
     """Method schematic: closed-form markers + anchor + downward search to M*.
     Illustrative (baseline data); the measured evaluation lives in Experiments."""
     fig, ax, c = _baseline_fM_axes()
-    # Bracket exactly as formula_guided.py computes it (itl-or-crossover cell).
-    seed = min(max(c.m_itl, c.m_tpf), M_MAX)
-    lo = max(1, min(c.m_itl, c.m_tpf))
-    hi = min(seed, 3 * c.m_itl, M_MAX)
-    # Anchor f* at the cell-chosen seed (itl-or-crossover ⇒ U), matching the algorithm.
+    # Bracket exactly as formula_guided.py (v3) computes it.
+    seed = M_MAX
     f_anchor = c.f_of[seed]
     threshold = (1.0 - EPS / 2.0) * f_anchor
+    lo = max(1, min(c.m_itl, c.m_tpf))
+    U = max(c.m_itl, c.m_tpf)
+    hi = min(seed, max(3 * U, lo + 1), M_MAX)
+    hi = max(lo, hi)
 
     # Replay the downward binary search to mark the probed midpoints.
     lo_i, hi_i, probes = lo, hi, []
@@ -204,7 +205,7 @@ def fig5_onset_search():
     # Anchor and threshold (horizontal references).
     ax.axhline(f_anchor, color="C3", linestyle="-.", linewidth=1.0, zorder=1)
     ax.axhline(threshold, color="C3", linestyle=":", linewidth=1.0, zorder=1)
-    ax.text(M_MAX * 0.62, f_anchor * 1.01, r"anchor $f^*=f(U)$",
+    ax.text(M_MAX * 0.62, f_anchor * 1.01, r"anchor $f^*=f(m_{\max})$",
             color="C3", fontsize=8, va="bottom")
     ax.text(M_MAX * 0.62, threshold * 0.985, r"threshold $(1-\varepsilon/2)f^*$",
             color="C3", fontsize=8, va="top")

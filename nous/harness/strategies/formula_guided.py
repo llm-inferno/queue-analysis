@@ -1,21 +1,24 @@
-"""formula_guided: closed-form guided downward onset search.
+"""formula_guided: closed-form-guided downward onset search (high anchor).
 
-Probes a high seed for f*, then binary-searches downward for the smallest M
-with f(M) >= (1-EPS/2)*f* — the plateau onset M*.
+Probes f* at m_max -- always on the plateau when f is monotone-to-plateau
+(P3) -- then binary-searches downward for the smallest M with
+f(M) >= (1-EPS/2)*f*, the plateau onset M*.
 
 Algorithm:
 1. Compute M_ITL (largest B with itl(B)<=targetITL) and M_TPF (largest B with
-   ttft_prefill(B)<=targetTTFT) via the closed-form formulas.
-2. Cell-aware seed (RP-7): if M_TPF < M_ITL (ttft-only cell) seed at m_max to
-   avoid the undershooting U=M_TPF (RP-5); else seed at U=min(M_TPF, m_max).
-3. Probe f* = target_eval(seed). Fall back to m_max if seed is infeasible.
+   ttft_prefill(B)<=targetTTFT) from the closed-form formulas (no oracle calls).
+2. Anchor f* = target_eval(m_max). The high anchor reads the true plateau
+   height; a constraint-endpoint seed U=max(M_ITL,M_TPF) can badly undershoot
+   when M/M/1 queue wait lifts realised throughput above the per-iteration
+   binding batch size (RP-2; e.g. bench-023 U=9 vs peak@57).
+3. If f* <= 0 the scenario is infeasible everywhere; return m_min (the truth
+   convention sets M_truth=m_min there).
 4. threshold = (1-EPS/2)*f* so the harness confirmatory call stays < EPS=0.02.
-5. Lower bracket lo = max(m_min, min(M_ITL, M_TPF)) (floors at M_TPF on ttft-only
-   where M_ITL=95 overshoots onset M*=92).
-6. Upper bracket hi = min(seed, 3*M_ITL) (occupancy-gap bound RP-2); for
-   ttft-only use hi=seed (M_ITL unreliable as tightener there).
-7. Binary search [lo, hi]; cap at MAX_ITERS=6 so worst-case total calls
-   (seed + search + harness-confirmatory) <= 8.
+5. Bracket: lo = max(m_min, min(M_ITL, M_TPF));
+   hi = min(seed, max(3*U, lo+1), m_max) with U=max(M_ITL,M_TPF) (occupancy-gap
+   bound RP-2; the lo+1 floor keeps the bracket non-empty when 3U is tiny).
+6. Binary search [lo, hi]; cap at MAX_ITERS=6 so worst-case total calls
+   (anchor + search + harness-confirmatory) <= 8.
 """
 
 from __future__ import annotations
@@ -24,7 +27,7 @@ from typing import Callable
 from nous.harness import formulas as F
 
 EPS = 0.02
-MAX_ITERS = 6  # seed(1) + MAX_ITERS(6) + harness-confirmatory(1) = 8
+MAX_ITERS = 6  # anchor(1) + MAX_ITERS(6) + harness-confirmatory(1) = 8
 
 
 def _largest_feasible(metric, params: dict, target: float) -> int:
@@ -36,39 +39,23 @@ def search(target_eval: Callable[[int], dict], params: dict, m_min: int, m_max: 
     M_ITL = _largest_feasible(F.itl, params, params["targetITL"])
     M_TPF = _largest_feasible(F.ttft_prefill, params, params["targetTTFT"])
 
-    # Cell-aware seed: probe f* HIGH when M_TPF < M_ITL (ttft-only cell, RP-7)
-    ttft_only_cell = M_TPF < M_ITL
-    if ttft_only_cell:
-        seed = m_max
-    else:
-        seed = min(max(M_ITL, M_TPF), m_max)  # constraint upper endpoint U
-
-    result = target_eval(seed)
-    fstar = result["throughput"]
-    if fstar <= 0.0 and seed < m_max:
-        seed = m_max
-        result = target_eval(seed)
-        fstar = result["throughput"]
+    seed = m_max
+    fstar = target_eval(seed)["throughput"]
     if fstar <= 0.0:
-        return m_max
+        return m_min  # fully infeasible -> truth convention M_truth = m_min
 
     threshold = (1.0 - EPS / 2.0) * fstar
 
-    # Lower bracket: min(M_ITL, M_TPF) handles ttft-only where M_ITL > onset
     lo = max(m_min, min(M_ITL, M_TPF))
-    # Upper bracket: tighten by occupancy-gap bound (RP-2); skip for ttft-only
-    if ttft_only_cell:
-        hi = min(seed, m_max)
-    else:
-        hi = min(seed, min(3 * M_ITL, m_max))
+    U = max(M_ITL, M_TPF)
+    hi = min(seed, max(3 * U, lo + 1), m_max)
     hi = max(lo, hi)
 
-    # Binary search downward: find smallest M in [lo, hi] with f(M) >= threshold
     iters = 0
     while lo < hi and iters < MAX_ITERS:
         mid = (lo + hi) // 2
-        v = target_eval(mid)
-        if v["throughput"] >= threshold:
+        v = target_eval(mid)["throughput"]
+        if v >= threshold:
             hi = mid
         else:
             lo = mid + 1
