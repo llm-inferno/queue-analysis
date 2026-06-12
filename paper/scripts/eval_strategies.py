@@ -148,6 +148,38 @@ def evaluate_all() -> dict:
     return {"eps": EPS, "records": records, "aggregates": aggregates}
 
 
+from nous.harness import formulas as F
+
+
+def trace(strategy_name: str, scenario_name: str) -> dict:
+    """Replay one strategy on a dev scenario, exposing the measured probe
+    sequence + the closed-form markers, for the search-trace figure."""
+    scns = json.loads((REPO / "nous" / "scenarios.json").read_text())["scenarios"]
+    s = next(x for x in scns if x["name"] == scenario_name)
+    params = {k: s[k] for k in PARAM_KEYS}
+    cache = json.loads((REPO / "nous" / "cache" / f"truth-{scenario_name}.json").read_text())
+    f = {pt["m"]: pt["throughput"] for pt in cache["f_curve"]}
+
+    ev, stats = cache_oracle(cache["f_curve"])
+    m_chosen = int(STRATEGIES[strategy_name](ev, params, M_MIN, M_MAX))
+    seed = stats["probes"][0]
+    f_anchor = f[seed]
+    m_itl = max((B for B in range(1, 257) if F.itl(B, params) <= params["targetITL"]), default=1)
+    m_tpf = max((B for B in range(1, 257) if F.ttft_prefill(B, params) <= params["targetTTFT"]), default=0)
+    return {
+        "probes": list(stats["probes"]),
+        "M_chosen": m_chosen,
+        "seed": seed,
+        "f_anchor": f_anchor,
+        "threshold": (1.0 - EPS / 2.0) * f_anchor,
+        "M_onset": epsilon_onset(cache["f_curve"]),
+        "M_truth": int(cache["M_truth"]),
+        "m_itl": m_itl,
+        "m_tpf": m_tpf,
+        "f_of": f,
+    }
+
+
 def main() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     out = evaluate_all()

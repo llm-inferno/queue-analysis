@@ -69,3 +69,13 @@ def test_evaluate_all_reproduces_headline():
     assert results["aggregates"]["benchmark"]["naive_ternary"]["gap_f_worst"] > 0.02
     # feasible-count invariant
     assert results["aggregates"]["benchmark"]["n_scenarios"] == 25
+
+
+def test_trace_baseline_probes():
+    tr = E.trace("formula_guided", "baseline")
+    assert tr["probes"] == [256, 148, 94, 67, 53, 60, 64]
+    assert tr["seed"] == 256
+    assert tr["M_onset"] == 66
+    assert tr["M_truth"] == 69
+    assert tr["m_itl"] == 40 and tr["m_tpf"] == 147
+    assert abs(tr["threshold"] - (1 - E.EPS / 2) * tr["f_anchor"]) < 1e-9
