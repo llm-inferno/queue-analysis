@@ -26,9 +26,6 @@ DATA_DIR = REPO / "paper" / "data"
 FIG_DIR = REPO / "paper" / "figs"
 TAB_DIR = REPO / "paper" / "tabs"
 M_MAX = 256
-# Search constants, mirroring nous/harness/strategies/formula_guided.py.
-EPS = 0.02
-MAX_ITERS = 6
 
 # Display order, grouped by regime; baseline first (headline).
 SCENARIOS = ["baseline", "alpha-low", "alpha-high", "itl-only", "ttft-only", "unbounded"]
