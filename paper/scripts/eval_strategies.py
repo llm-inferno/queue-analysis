@@ -49,3 +49,37 @@ def epsilon_onset(f_curve: list[dict], eps: float = EPS):
         if f[m] >= thresh:
             return m
     return max(f)
+
+
+def replay(search, params: dict, cache: dict, m_min: int = M_MIN, m_max: int = M_MAX) -> dict:
+    """Run one strategy against one cached scenario; return a scored record.
+
+    Adds one confirmatory oracle(M_chosen) call after the strategy returns,
+    matching nous/harness/run.py (so `calls` includes that +1)."""
+    f_curve = cache["f_curve"]
+    f = {pt["m"]: pt["throughput"] for pt in f_curve}
+    M_truth = int(cache["M_truth"])
+    f_truth = float(cache["throughput_truth"])
+    onset = epsilon_onset(f_curve)
+    onset_eff = onset if onset is not None else M_truth
+
+    ev, stats = cache_oracle(f_curve)
+    m_chosen = int(search(ev, params, m_min, m_max))
+    if not (m_min <= m_chosen <= m_max):
+        raise ValueError(f"strategy returned M={m_chosen} outside [{m_min}, {m_max}]")
+    thr_chosen = ev(m_chosen)["throughput"]  # confirmatory (counted if feasible)
+
+    gap_f = max((f_truth - thr_chosen) / f_truth, 0.0) if f_truth > 0 else 0.0
+    return {
+        "M_chosen": m_chosen,
+        "calls": stats["calls"],
+        "probes": list(stats["probes"]),
+        "throughput_chosen": thr_chosen,
+        "M_onset": onset_eff,
+        "M_truth": M_truth,
+        "throughput_truth": f_truth,
+        "feasible": f_truth > 0,
+        "gap_onset": abs(m_chosen - onset_eff),
+        "gap_argmax": abs(m_chosen - M_truth),
+        "gap_f": gap_f,
+    }
