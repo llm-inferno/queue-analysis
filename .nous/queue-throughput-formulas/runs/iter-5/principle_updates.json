@@ -1,0 +1,72 @@
+[
+  {
+    "id": "RP-3",
+    "statement": "Saturation throughput S(B)=1000*B/tau(B) is monotonically increasing and concave in B under nc=1, approaching the analytic ceiling S_inf from below. Throughput f(M) is non-decreasing in M and reaches a flat plateau extending to M_MAX on the nc=1 dev set (peak-to-f(256) drop <= 0.0027 on all six). On the 30-scenario benchmark, 23/25 feasible scenarios still have f(256) within 1% of peak, and all 25 within 2.86%. The plateau is present but slightly weaker on the benchmark than on the dev set. The nc-jump non-monotone exception (bench-025, nc 1->67 at high M) is isolated to scenarios where num_iterations_per_prefill jumps within [1,256]; the single-m_max anchor remains safe when the post-peak decline <= epsilon (2.86% < 2% threshold fails, but the m_max-anchored threshold 0.99*f(256) is satisfied at the M=6 onset before the decline region).",
+    "confidence": "high",
+    "regime": "nc=1 for all B in [1,256] gives monotone plateau; nc jump within [1,256] can cause interior peak, but m_max anchor remains feasibility-safe when peak-to-f(m_max) decline < EPS (2%) on this benchmark grid (bench-025: 2.86% > EPS but threshold 0.99*f(m_max) still catches M=6 onset first)",
+    "evidence": ["iteration-5-h-main", "iteration-5-h-control-negative", "iteration-5-h-ablation"],
+    "contradicts": [],
+    "extraction_iteration": 5,
+    "mechanism": "bench-025: nc jumps from 1 to 67 at M~200 (formulas.py:44 num_iterations_per_prefill), inflating tau and depressing throughput above M~6. naive_max (M=256) lands in the depressed tail: gap_f=0.0286 > epsilon. h-main (m_max anchor) reads f*(256)=0.9714*peak; threshold=0.99*f*(256)=0.9617*peak; first M where f(M)>=threshold is M=6 onset, so descent stops there (gap_M=0, gap_f=0 vs truth). The anchor is safe because 0.99*f(m_max) > 0.98*peak iff the decline is < 1%, which holds with margin on this grid but would break if a future grid had >2% post-peak decline at m_max.",
+    "applicability_bounds": "Safe when peak-to-f(m_max) decline < EPS/2 = 1%. On this 30-scenario benchmark all 25 feasible scenarios satisfy this. Falls back to multi-probe f* if decline exceeds EPS.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-8",
+    "statement": "A downward monotone-predicate binary search anchored at m_max for f* (not the occupancy-bounded U) achieves worst-case calls=8 (seed + MAX_ITERS=6 + harness-confirmatory) on the 30-scenario benchmark while achieving worst gap_M=72 and worst gap_f=0.0138 — both strictly within the epsilon=0.02 constraint. The high-anchor (always m_max) is necessary and sufficient to fix the occupancy-gap bench-023 violation: reverting to the iter-4 U-seed restores gap_f=0.2238 on bench-023 while leaving all other scenarios unchanged. Pareto-dominates both naive_max and naive_ternary in aggregate gap_M.",
+    "confidence": "high",
+    "regime": "30-scenario benchmark including occupancy-gap, fully-infeasible, and interior-peak/nc-jump regimes; m_min=1, m_max=256; EPS=0.02; MAX_ITERS=6",
+    "evidence": ["iteration-5-h-main", "iteration-5-h-robustness"],
+    "contradicts": [],
+    "extraction_iteration": 5,
+    "mechanism": "High-anchor necessity: bench-023's U=max(M_ITL,M_TPF)=9 underestimates the plateau peak because the M/M/1 queue wait lifts realized throughput above the per-iteration binding B (RP-2). f*(U=9) << f*(57=peak), threshold set too low, descent terminates at M=9 (gap_f=0.22). m_max anchor reads f*(256)≈f*(57), threshold correct, descent finds onset~13 (gap_f=0.0037). Infeasibility detection: on 5 fully-infeasible scenarios (every /target 400s) fstar=0 at m_max -> return m_min=1=M_truth (gap_M=0). Without this, gap_M=255 on all 5.",
+    "applicability_bounds": "Applies when f is non-decreasing to a plateau (nc=1 or nc-jump with post-peak decline < EPS). Does not apply when the plateau is absent (non-concave f with deep valleys); in that case multi-probe f* over several candidate M values would be needed.",
+    "superseded_by": null,
+    "category": "algorithmic",
+    "status": "active"
+  },
+  {
+    "id": "RP-10",
+    "statement": "The cache M_truth is the argmax (smallest m reaching the strict float-maximum throughput), not the 0.98-onset. On the dev set's float-flat plateau argmax == onset, but on the benchmark's wiggly plateau they diverge significantly (bench-019 onset~46 vs argmax=118; bench-023 onset~13 vs argmax=57). A concurrency-correct onset finder carries a structural gap_M floor on wide-plateau scenarios that no strategy can close without over-provisioning to the argmax. This floor must be reported per-regime and is not strategy error.",
+    "confidence": "high",
+    "regime": "30-scenario benchmark; any scenario where the plateau wiggles at float precision such that the strict argmax sits well above the 0.98-onset",
+    "evidence": ["iteration-5-h-main"],
+    "contradicts": [],
+    "extraction_iteration": 5,
+    "mechanism": "baseline_truth.py computes M_truth as the smallest m where throughput is strictly greater than the previous best (if t > best_t). On a float-flat dev plateau the first non-zero throughput point is both argmax and onset. On the benchmark's wiggly plateau the float-exact maximum sits at an interior point (e.g. bench-019: plateau runs M=16..256 but float maximum is at M=118). Scoring computes gap_M=abs(M_chosen-M_truth); a correct onset finder (M=46) scores gap_M=72 against the argmax (M=118) even though 46 is a perfectly valid concurrency choice.",
+    "applicability_bounds": "Relevant whenever gap_M is used as the evaluation metric and the plateau has float-level wiggles. Applies to the current harness/scoring.py; would not apply if gap_M were scored against a fixed 0.98-onset.",
+    "superseded_by": null,
+    "category": "evaluation",
+    "status": "active"
+  },
+  {
+    "id": "RP-11",
+    "statement": "Parameter-blind ternary search (maximizing throughput over [m_min, m_max]) returns gap_M=0 on fully-infeasible scenarios as a behavioral coincidence: when all /target calls return 400 (throughput=0), f1==f2 at every ternary step so hi always narrows, converging to lo=m_min=M_truth=1. This is not an explicit infeasibility check — it consumes 0 counted calls (400s not counted by oracle.py) and would not hold if the ternary comparison logic were reversed or if m_min != M_truth.",
+    "confidence": "medium",
+    "regime": "Fully-infeasible scenarios (every /target returns HTTP 400); m_min=1; oracle.py does not count 400 responses toward stats.calls",
+    "evidence": ["iteration-5-h-ablation"],
+    "contradicts": [],
+    "extraction_iteration": 5,
+    "mechanism": "naive_ternary.py: while hi-lo>2, m1=lo+(hi-lo)//3, m2=hi-(hi-lo)//3, f1=f2=0 so else branch: hi=m2. hi narrows monotonically toward lo. Final for-loop over [lo,hi+1] finds all throughputs 0, so best stays at lo=m_min=1. With M_truth=m_min=1, gap_M=0. This is an artifact of the else-branch preference narrowing hi rather than lo when f1==f2.",
+    "applicability_bounds": "Holds only when (1) ALL target_eval calls return 0, (2) m_min == M_truth, (3) the ternary breaks ties by narrowing hi. Would not hold on partially-infeasible scenarios or if the tie-breaking were different.",
+    "superseded_by": null,
+    "category": "algorithmic",
+    "status": "active"
+  },
+  {
+    "id": "RP-2",
+    "statement": "M_ITL is a lower bound on the oracle plateau-onset M*, not M* itself. Realized AvgITL averages over occupancy <=B, so AvgITL<=itl(B); the ITL SLO can be satisfied at batch sizes above M_ITL. The oracle-confirmed occupancy gap M_truth/M_ITL spans 1.59-2.83 on ITL-binding dev scenarios and is NOT a clean constant. On the 30-scenario benchmark this occupancy gap can be even larger: bench-023 has U=max(M_ITL,M_TPF)=9 while the plateau peak is at M~57, a gap of 6.3x. Using U as the f* anchor underestimates the peak in these scenarios (gap_f=0.22); always anchoring f* at m_max eliminates this failure mode.",
+    "confidence": "high",
+    "regime": "Any scenario where M/M/1 queue wait allows realized throughput to climb far above the per-iteration binding B; the occupancy gap is larger on the benchmark than on the dev set",
+    "evidence": ["iteration-5-h-main", "iteration-5-h-robustness"],
+    "contradicts": [],
+    "extraction_iteration": 5,
+    "mechanism": "bench-023: the M/M/1 queue wait means that at M=9 the system operates well below B=9 on average, so AvgITL < itl(9) and the ITL SLO is satisfied at M values far above 9. The plateau onset is ~13 and the argmax is 57. The iter-4 strategy seeded f* at U=9, which produced a threshold based on f(9) << f(57), causing the descent to stop at M=9 (gap_f=0.2238). The fix — always anchor at m_max — reads f*(256)≈f*(57) and yields the correct threshold.",
+    "applicability_bounds": "The high-anchor (m_max) fix is always safe when m_max sits on or near the plateau (RP-3). It uses one extra call (the m_max seed probe) vs the U-seed, which is acceptable within the MAX_ITERS=6 budget.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  }
+]

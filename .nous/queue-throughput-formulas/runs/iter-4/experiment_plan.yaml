@@ -1,0 +1,64 @@
+metadata:
+  iteration: 4
+  bundle_ref: "runs/iter-4/bundle.yaml"
+  description: >-
+    Iter-4: implement and validate formula_guided, naive_ternary, naive_max strategies
+    on the 6-scenario dev set. Headline metric: gap_M (concurrency distance from onset M*).
+    Gate: formula_guided worst gap_M strictly beats naive_max (239) and naive_ternary (~127),
+    at worst gap_f <= 0.02 and calls <= 8.
+
+setup:
+  - cmd: "source nous/.venv/bin/activate"
+    description: "Activate Python venv (go1.26.4 on PATH; harness spawns go run main.go)"
+  - cmd: "# Strategy files created under nous/harness/strategies/: formula_guided.py (h-main), naive_ternary.py (h-ablation), naive_max.py (h-control-negative)"
+    description: "Strategy files created by executor; patches in runs/iter-4/patches/"
+
+arms:
+  - arm_id: "h-control-negative"
+    conditions:
+      - name: "dev-set"
+        cmd: >-
+          source nous/.venv/bin/activate &&
+          python -m nous.harness.run
+          --scenarios nous/scenarios.json
+          --strategy nous/harness/strategies/naive_max.py
+          --m-min 1 --m-max 256
+          --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-4/results/h-control-negative/dev.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-4/results/h-control-negative/dev.json"
+
+  - arm_id: "h-ablation"
+    conditions:
+      - name: "dev-set"
+        cmd: >-
+          source nous/.venv/bin/activate &&
+          python -m nous.harness.run
+          --scenarios nous/scenarios.json
+          --strategy nous/harness/strategies/naive_ternary.py
+          --m-min 1 --m-max 256
+          --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-4/results/h-ablation/dev.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-4/results/h-ablation/dev.json"
+
+  - arm_id: "h-main"
+    conditions:
+      - name: "dev-set"
+        cmd: >-
+          source nous/.venv/bin/activate &&
+          python -m nous.harness.run
+          --scenarios nous/scenarios.json
+          --strategy nous/harness/strategies/formula_guided.py
+          --m-min 1 --m-max 256
+          --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-4/results/h-main/dev.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-4/results/h-main/dev.json"
+
+  - arm_id: "h-robustness"
+    conditions:
+      - name: "ttft-only-focus"
+        cmd: >-
+          source nous/.venv/bin/activate &&
+          python -m nous.harness.run
+          --scenarios nous/scenarios.json
+          --strategy nous/harness/strategies/formula_guided.py
+          --m-min 1 --m-max 256
+          --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-4/results/h-robustness/dev.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-4/results/h-robustness/dev.json"
+        description: "Same strategy as h-main; analyzed separately for ttft-only row (cell-aware high seeding verification)."

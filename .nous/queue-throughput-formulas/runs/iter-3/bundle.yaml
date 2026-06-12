@@ -1,0 +1,141 @@
+metadata:
+  iteration: 3
+  family: "oracle-validated-endpoint-predictor"
+  research_question: >-
+    Given the iter-2 regime partition and its per-cell bracket [M_ITL, min(M_TPF,256)],
+    which point in the bracket should a formula-guided strategy seed at to minimize
+    gap_throughput_rel with the fewest /target calls? Iter-2 designated the LOWER endpoint
+    M_ITL as the per-cell point estimate. This is the first oracle-enabled iteration:
+    validate that choice against /target and the truth caches on the six dev scenarios,
+    and fit any occupancy-gap correction the data demands. Each condition is a standalone
+    strategy file run through nous.harness.run; the Pareto axes are (calls,
+    gap_throughput_rel).
+
+arm_selection_rationale: >-
+  This is an observe+oracle iteration: every arm is a strategy file scored against the
+  live /target oracle and the truth caches via `python -m nous.harness.run`, so the arms
+  share one execution path and the only thing that varies is the seed M. h-main asserts
+  the central reframe — the bracket UPPER endpoint (not the iter-2 lower endpoint) is the
+  throughput-optimal one-call seed, because the plateau onset M* lies at or above M_ITL
+  (RP-2 occupancy gap). h-ablation removes exactly one component (swap upper->lower
+  endpoint) and shows gap_throughput_rel inflates on the ITL-binding scenarios, proving
+  the upper endpoint is the load-bearing choice. h-control-negative is the crux for iter-4
+  scoping: a degenerate constant-M_MAX strategy MATCHES seed_upper to float noise on the
+  dev set, because under nc=1 the f-plateau extends all the way to M_MAX — so the
+  throughput benefit of formula precision VANISHES on this set and only reappears when nc>1
+  breaks the plateau (iter-5 benchmark). h-robustness records that for ttft-only the
+  bracket fails to contain M_truth (92 > 70) yet seed_upper is still throughput-optimal,
+  correcting the iter-2/RP-5 expectation that M_TPF upper-bounds the throughput argmax.
+  h-super-additivity is omitted: there is a single mechanism (where the seed lands on the
+  f-plateau) and no interacting factors to combine.
+
+arms:
+  - type: h-main
+    prediction: >-
+      The strategy seed_upper (bracket UPPER endpoint: unbounded->256, ttft-only->M_TPF,
+      itl-or-crossover->min(M_TPF,256)) achieves gap_throughput_rel at or below seed_lower
+      (the iter-2 LOWER-endpoint point estimate M_ITL) on every dev scenario, with
+      gap_throughput_rel(seed_upper) near zero (<= ~0.005) on all six, at exactly 1 oracle
+      call. The improvement of seed_upper over seed_lower is monotonically larger the
+      larger the occupancy ratio M_truth/M_ITL: it is largest on alpha-high and itl-only
+      (ratio ~2.1-2.8) and smallest on alpha-low (ratio ~1.6). Directionally, moving the
+      seed from the lower to the upper bracket endpoint reduces gap_throughput_rel and
+      never increases it.
+    mechanism: >-
+      f(M) is non-decreasing in M up to a plateau whose onset M* is the throughput argmax.
+      RP-2: realized AvgITL averages over occupancy <= B, so the ITL SLO is met above the
+      full-batch crossing M_ITL; hence M* >= M_ITL and M_ITL sits on the RISING part of
+      f(M) (under-shooting throughput). The upper endpoint min(M_TPF,256) sits at or beyond
+      M*, on the flat plateau, so f(upper) ~ f(M*) = f_truth. Under nc=1 (verified for all
+      six scenarios) delta is constant, tau(B) is affine, and S(B)=1000B/tau(B) is
+      concave-increasing (RP-3), so the plateau never turns back down within [1,256] —
+      the upper endpoint cannot overshoot into a declining region. The size of the
+      under-shoot at M_ITL grows with the occupancy gap M_truth/M_ITL, which is why the
+      gap_rel improvement tracks that ratio.
+    diagnostic: >-
+      If seed_upper's gap_rel exceeds seed_lower's on any scenario, f(M) is NOT monotone to
+      the plateau there — inspect the truth f_curve for a peak-then-decline (would indicate
+      a constraint forcing f down at large M, contradicting RP-3 under nc=1; recheck nc via
+      num_iterations_per_prefill). If seed_upper returns an infeasible M (confirmatory call
+      yields throughput 0 -> gap_rel ~ 1.0), the queue wait makes min(M_TPF,256) infeasible
+      even though the ttft_prefill primitive is satisfied there; in that case the upper
+      endpoint must be pulled back below the queue-feasible frontier (an iter-4 fallback).
+
+  - type: h-ablation
+    component: "upper-bracket-endpoint"
+    prediction: >-
+      Replacing the upper endpoint with the LOWER endpoint M_ITL (strategy seed_lower,
+      identical predict-and-confirm skeleton, same 1 call) materially inflates
+      gap_throughput_rel on the four ITL-binding scenarios (baseline, itl-only, alpha-low,
+      alpha-high) and leaves ttft-only and unbounded unchanged (their lower and upper
+      endpoints coincide). Directionally, seed_lower's gap_throughput_rel is strictly
+      larger than seed_upper's on every ITL-binding scenario and the two are equal on
+      ttft-only and unbounded. This establishes the upper endpoint — not merely "a formula
+      seed" — as the necessary component.
+    mechanism: >-
+      M_ITL is a strict lower bound on the plateau onset M* (RP-2): for the four
+      ITL-binding scenarios M_truth/M_ITL is well above 1 (baseline 69/40, itl-only 17/8,
+      alpha-low 170/107, alpha-high 17/6), so M_ITL lands on the rising part of f(M) and
+      f(M_ITL) < f_truth by exactly the rise from M_ITL to the plateau. For ttft-only the
+      cell rule sets both endpoints to M_TPF, and for unbounded both are M_MAX, so removing
+      the upper endpoint changes nothing there — the ablation is specific to the fused
+      itl-or-crossover cell where the occupancy gap lives.
+    diagnostic: >-
+      If seed_lower's gap_rel is NOT larger on the ITL-binding scenarios, M_ITL is already
+      on the plateau there (occupancy gap ~ 1) — recompute M_truth/M_ITL from the truth
+      cache; a ratio near 1 would mean RP-2's occupancy gap is negligible for that
+      scenario. If ttft-only or unbounded differ between seed_lower and seed_upper, the
+      cell endpoints are not coinciding as expected — re-derive M_TPF and M_ITL for that
+      scenario.
+
+  - type: h-control-negative
+    component: "formula-precision-on-throughput-axis"
+    prediction: >-
+      The degenerate strategy naive_max (return M_MAX=256 unconditionally, no formula)
+      matches seed_upper's gap_throughput_rel to within float noise on all six dev
+      scenarios (max |gap_rel(seed_upper) - gap_rel(naive_max)| ~ 0, both <= ~0.005), at
+      the same 1 oracle call. Thus on the nc=1 dev set the throughput axis CANNOT
+      distinguish a precise formula seed from a constant M_MAX seed — the throughput
+      benefit of formula precision vanishes here. Directionally, the gap_rel gain of
+      seed_upper over naive_max is statistically indistinguishable from zero on this set.
+    mechanism: >-
+      Under nc=1 (verified for all six) delta is constant, tau(B) is affine, and
+      S(B)=1000B/tau(B) is concave-increasing toward S_inf (RP-3), so f(M) rises to a
+      plateau and never declines within [1,256]; the truth f_curves confirm the 99%-plateau
+      extends to M=256 on every scenario (peak-to-f(256) drop <= 0.0027). Therefore M_MAX
+      sits ON the plateau and scores the same as any plateau point, including the formula
+      upper endpoint. The control vanishing here is meaningful: it predicts that the
+      throughput advantage of formula guidance can ONLY appear when nc>1 makes tau(B)
+      super-linear so S(B) PEAKS and declines (M_MAX then falls off the plateau) — the
+      iter-5 benchmark regime.
+    diagnostic: >-
+      If naive_max's gap_rel is materially worse than seed_upper's on any dev scenario, the
+      f_curve declines before M=256 there (a peak-then-drop) — inspect the truth f_curve
+      tail and recheck nc stayed at 1 across [1,256]. That would be the first dev-set
+      evidence that the plateau breaks and would promote precise seeding from "no
+      throughput benefit" to "necessary" earlier than iter-5.
+
+  - type: h-robustness
+    prediction: >-
+      For ttft-only the truth argmax M_truth=92 lies ABOVE the bracket upper endpoint
+      U=M_TPF=70, so the iter-2 bracket [M_ITL,U] FAILS to contain M_truth — yet
+      seed_upper's gap_throughput_rel at U is still near zero (<= ~0.005). For the other
+      five scenarios the bracket contains M_truth. Directionally, throughput-optimality of
+      the upper endpoint is robust to the bracket missing the argmax: gap_throughput_rel(U)
+      stays near zero whether or not M_truth lies inside the bracket. This corrects the
+      iter-2/RP-5 expectation that M_TPF upper-bounds the throughput argmax — it upper-
+      bounds the TTFT CONSTRAINT crossing, not the throughput argmax.
+    mechanism: >-
+      RP-5 establishes M_TPF as an upper bound on the TTFT-CONSTRAINT-binding M, because the
+      queue wait only adds to TTFT. But the throughput ARGMAX is set by where f(M)
+      saturates, not by where a single constraint crosses; the plateau begins below M_truth
+      and is flat through it (60..256 within 1% for ttft-only), so evaluating at U=70 — even
+      though M_truth=92 — still lands on the plateau and yields f ~ f_truth. The bracket is
+      a CONSTRAINT-crossing bracket, not an argmax bracket; throughput cares only about
+      being past the plateau onset.
+    diagnostic: >-
+      If gap_rel(U) for ttft-only is materially above zero, the plateau onset for ttft-only
+      is above U=70 (U is below the plateau) — inspect the truth f_curve to find the true
+      99%-plateau start and compare to M_TPF. If the bracket unexpectedly DOES contain
+      M_truth for ttft-only, recompute M_TPF (largest B with ttft_prefill(B) <= targetTTFT)
+      — a value of 92 would mean the primitive crossing moved.

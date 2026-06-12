@@ -1,9 +1,0 @@
-{
-  "gate_type": "design",
-  "summary": "We are testing whether a tight-trust predictor (\u00b12 error bound) can find the optimal MaxBatchSize in \u22645 oracle calls with zero throughput gap, Pareto-dominating pure binary search (9 calls) while confirming that the ratio-based refinement step is necessary to eliminate gap. This is iteration 4, building on validated predictor accuracy (max_error=2) from iteration 3.",
-  "key_points": [
-    "Four arms map the Pareto front of (oracle calls, throughput gap): h-main (predictor_direct, \u22645 calls, gap=0), h-control-negative (binary search, 9 calls, gap=0), h-ablation (predictor without refinement, 3 calls, gap>0 for 2/4 scenarios), h-robustness (existing \u00b15 hybrid, 5 calls, gap=0 but higher mean calls).",
-    "Confirmation criteria: predictor_direct achieves gap_throughput_rel=0 across all 4 scenarios with worst-case \u22645 calls; predictor_naive shows measurable gap (~2.5% baseline, ~0.5% long-loose-itl) proving refinement is load-bearing; ratio_binary_search uses exactly 9 calls establishing the no-predictor cost baseline.",
-    "Refutation signals: if predictor_direct exceeds 5 calls or produces gap>0, the \u00b12 error bound from iteration 3 was not reliable; if predictor_naive shows gap=0, the predictor error was actually 0 (making refinement unnecessary); if predictor_hybrid fails but predictor_direct succeeds, something is inconsistent in the oracle model."
-  ]
-}

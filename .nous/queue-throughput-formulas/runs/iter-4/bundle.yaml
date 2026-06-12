@@ -1,0 +1,180 @@
+metadata:
+  iteration: 4
+  family: "concurrency-optimal-formula-guided-onset-search"
+  research_question: >-
+    On the six dev scenarios, can a formula-guided downward search locate the plateau-ONSET
+    M* (smallest M with gap_f <= epsilon=0.02) with worst-case gap_M strictly below BOTH
+    the constant-M_max baseline and a parameter-blind ternary search, at <= 8 /target calls
+    and gap_f <= epsilon? The headline axis is concurrency (gap_M), NOT throughput (gap_f):
+    the brief establishes that any M >= M* (incl. M_max=256) ties on throughput in one
+    call, so gap_f is a feasibility constraint and gap_M is what a precise predictor must
+    win. Mechanism under test: probe a high seed for f*, then binary-search downward for the
+    smallest M with f(M) >= (1-epsilon/2)*f*, bracketed by the closed-form M_ITL.
+
+arm_selection_rationale: >-
+  The brief's iter-4 stage ships exactly three strategy files, and the four arms map onto
+  them. h-main (formula_guided) is the deliverable: the downward onset search. The two
+  baselines are the two failure modes gap_M is designed to expose, so each is its own arm:
+  h-control-negative (naive_max) is the regime where the concurrency objective is abandoned
+  — it ties every strategy on the throughput axis (gap_f<=0.0027 in 1 call) yet has maximal
+  gap_M (returns 256 always; worst 239), proving gap_f cannot discriminate and motivating
+  the whole concurrency reframe. h-ablation (naive_ternary) removes the formula guidance but
+  KEEPS generic search: it can land on the plateau (gap_f~0) but converges to an interior/
+  high plateau point rather than the onset (worst gap_M~127) and costs ~25-30 calls — so it
+  isolates that the formula's analytic DOWNWARD-onset targeting, not search per se, is what
+  delivers low gap_M cheaply. h-robustness stresses formula_guided on the TTFT-binding
+  ttft-only cell where the constraint upper endpoint U=M_TPF=70 UNDERSHOOTS the onset M*=92
+  (RP-5): it tests that cell-aware HIGH seeding (the M_TPF<M_ITL signature, RP-7, triggers an
+  M_max f* probe) keeps f* reliable so the search does not inherit U's undershoot.
+  h-super-additivity is omitted: there is a single mechanism (downward onset search seeded by
+  closed forms) with no two interacting factors to combine super-additively.
+
+arms:
+  - type: h-main
+    component: "downward-onset-binary-search"
+    prediction: >-
+      formula_guided locates the plateau-onset M* on all six dev scenarios with worst-case
+      gap_M STRICTLY BELOW both baselines: well under naive_max's worst gap_M=239 and under
+      naive_ternary's worst gap_M~127. Offline simulation of the mechanism gives worst
+      gap_M ~22 (ttft-only) and <=9 on the other five (alpha-high 1, baseline 2, itl-only 0,
+      alpha-low 9, unbounded 0). Simultaneously it holds gap_f <= epsilon on every scenario
+      (sim worst gap_f ~0.010, kept under epsilon by the epsilon/2 search margin) at far
+      fewer calls than naive_ternary (~25-30). Directionally: replacing the constant/ternary
+      target with a formula-guided downward onset search REDUCES gap_M by an order of
+      magnitude while keeping gap_f under epsilon and calls low. Call budget target is <=8;
+      this is the engineering knob (bracket width) the executor tunes, and the gap_M
+      dominance does not depend on hitting it exactly.
+    mechanism: >-
+      f(M) is monotone-rising to a flat plateau (RP-3, nc=1 on the dev set), so the predicate
+      P(M) = [f(M) >= (1-epsilon)*f*] is monotone: false below the onset M*, true at and
+      above it. Probing a high seed yields f* ~ peak (the seed sits on the plateau), and a
+      binary search for the smallest M satisfying P descends to M*. The closed-form M_ITL is
+      a proven lower bound on M* (RP-1/RP-2: occupancy ratio M_truth/M_ITL in [1.59,2.83]),
+      so the search is bracketed in [M_ITL, seed] and never wastes probes below M_ITL. The
+      epsilon/2 threshold margin guarantees the confirmatory f(M_chosen) stays within epsilon
+      of truth peak. naive_max returns 256 (gap_M ~ 256-M*, maximal) and naive_ternary
+      maximizes f and converges to wherever the plateau is widest/flattest (not its onset),
+      so only a downward predicate search targeting the (1-eps) crossing lands ON the onset.
+    diagnostic: >-
+      If formula_guided's gap_M does NOT beat naive_ternary on some scenario, check (a) the
+      seed undershot the plateau so f* < true peak (the threshold is then too low and the
+      search stops above the onset) — print f(seed) vs f(256) and confirm the cell-aware
+      high seed fired; (b) M_ITL exceeded the onset (RP-2 violated for that cell, as it is for
+      ttft-only where M_ITL=95 > M*=92) so the lower bracket clipped the answer — fall back
+      to lower bracket min(M_ITL, M_TPF). If gap_f exceeds epsilon on the confirmatory call,
+      the epsilon/2 margin was insufficient (seed below plateau); widen the seed to M_max. If
+      calls exceed 8, the bracket [M_ITL, seed] was too wide (U=M_max with large M_ITL) — use
+      the occupancy-gap upper bound (~3*M_ITL) or coarsen the binary tolerance.
+    code_changes:
+      - file: "nous/harness/strategies/formula_guided.py"
+        intent: >-
+          NEW strategy. Implement search(target_eval, params, m_min, m_max): compute the
+          closed forms M_ITL = largest B with itl(B,params) <= targetITL and
+          M_TPF = largest B with ttft_prefill(B,params) <= targetTTFT (using
+          nous.harness.formulas). Pick a HIGH seed for f*: if M_TPF < M_ITL (ttft-only cell,
+          RP-7) or U=min(M_TPF,m_max) is below the plateau, seed at m_max; else seed at the
+          constraint upper endpoint U. Probe f* = target_eval(seed). Set threshold =
+          (1 - epsilon/2)*f* with epsilon=0.02. Binary-search DOWNWARD for the smallest M in
+          [lower, seed] with target_eval(M) >= threshold, where lower = min(M_ITL, M_TPF) and
+          the upper bracket is tightened to <= ~3*M_ITL (RP-2 occupancy gap) when U=m_max, so
+          worst-case calls (incl. the +1 confirmatory) stay <= 8. Return the smallest such M.
+          Guard: if a probe returns throughput 0 (infeasible 400), treat it as below-onset
+          and search upward of it; never return m_min.
+        rationale: >-
+          This is the brief's iter-4 deliverable (description.txt:181-187): a
+          concurrency-optimal onset finder. The downward monotone-predicate search on a
+          closed-form-bracketed interval is the minimal mechanism that lands on M* (low gap_M)
+          rather than on M_max (naive_max) or an arbitrary plateau point (naive_ternary).
+
+  - type: h-control-negative
+    component: "concurrency-targeting"
+    prediction: >-
+      naive_max returns M=256 on every dev scenario: gap_f <= 0.0027 (throughput-perfect) at
+      exactly 1 call, BUT gap_M is maximal — worst 239 (itl-only, alpha-high), >=86 on every
+      ITL/TTFT-binding scenario, and 0 only on unbounded (where M*=256). Directionally, on the
+      throughput axis naive_max is indistinguishable from any strategy (the effect to be won,
+      gap_f, VANISHES), while on the concurrency axis it is the worst possible — confirming
+      gap_f cannot reward precision and that low gap_M requires actually locating M*.
+    mechanism: >-
+      Under nc=1 the f-plateau extends to M_max (RP-3; peak-to-f(256) drop <= 0.0027 on all
+      six dev scenarios, verified live this iteration), so M_max sits ON the plateau and ties
+      every strategy on gap_f. But the onset M* is far below 256 for every binding scenario
+      (17-170), so |256 - M*| is large. naive_max provisions the maximum batch for zero
+      throughput gain over M* — the over-provisioning the concurrency objective penalizes.
+    diagnostic: >-
+      If naive_max's gap_f exceeds epsilon on any dev scenario, the f_curve declines before
+      256 (a peak-then-drop under nc>1) — recheck num_iterations_per_prefill across [1,256]
+      for that scenario; under nc=1 this should not occur on the dev set. If its gap_M is
+      small on a binding scenario, M_truth is near 256 there (recompute the onset from the
+      truth f_curve).
+    code_changes:
+      - file: "nous/harness/strategies/naive_max.py"
+        intent: >-
+          NEW strategy (constant baseline). search(target_eval, params, m_min, m_max) returns
+          m_max unconditionally; no formula, no probe. (Identical to the iter-3 staged file;
+          the executor places it under strategies/.)
+        rationale: >-
+          The brief's required constant baseline (description.txt:184,191). It is the
+          throughput-axis control: 1 call, gap_f~0, but the maximal gap_M that the formula
+          must beat.
+
+  - type: h-ablation
+    component: "formula-guidance"
+    prediction: >-
+      naive_ternary (generic search, no formula) lands on the plateau (gap_f <= epsilon on
+      all six) but does NOT find the onset: it converges to an interior/high plateau point,
+      giving worst-case gap_M ~127 (ttft-only, lands ~219 in sim) and ~23 on alpha-high,
+      while costing ~25-30 /target calls. Directionally, removing the formula guidance keeps
+      throughput-feasibility but (a) inflates gap_M far above formula_guided's (~22 worst) and
+      (b) multiplies calls ~3-5x. This isolates the analytic downward-onset targeting — not
+      the mere ability to search — as the component delivering low gap_M cheaply.
+    mechanism: >-
+      Ternary search maximizes f(M); on a long flat plateau the comparisons between near-equal
+      f values steer it toward the middle/upper plateau, not its onset, because nothing in a
+      max-seeking search rewards the SMALLEST plateau point. Without the closed-form M_ITL
+      bracket and the (1-eps) downward predicate, it cannot know where the plateau begins, so
+      its M_chosen sits well above M* (large gap_M). And it must probe ~2 points per
+      log-step over [1,256], ~25-30 feasible calls, versus the formula's bracketed descent.
+    diagnostic: >-
+      If naive_ternary's gap_M is already small (near formula_guided's), the plateau onset
+      coincides with the ternary fixpoint for that scenario (narrow plateau) — inspect the
+      f_curve width above M*. If its calls are far below ~25, the search range collapsed early
+      (many 400s reducing the feasible interval) — check how many probes returned throughput 0.
+    code_changes:
+      - file: "nous/harness/strategies/naive_ternary.py"
+        intent: >-
+          NEW strategy (parameter-blind search baseline). search(target_eval, params, m_min,
+          m_max) ignores params and runs a ternary search over [m_min, m_max] maximizing
+          target_eval(M), returning the argmax. Standard ternary: while hi-lo>2, probe
+          m1=lo+(hi-lo)//3 and m2=hi-(hi-lo)//3, keep the better third; finish with a tiny
+          linear sweep of the residual window. Treat throughput-0 probes as -inf (infeasible).
+        rationale: >-
+          The brief's required blind-search baseline (description.txt:184,191). It is the
+          ablation that removes the formula while keeping search, exposing both the call cost
+          and the gap_M (onset-blindness) that the formula eliminates.
+
+  - type: h-robustness
+    component: "cell-aware-high-seed"
+    prediction: >-
+      On the TTFT-binding ttft-only scenario the constraint upper endpoint U=M_TPF=70
+      UNDERSHOOTS the onset M*=92 (RP-5). With cell-aware HIGH seeding (M_TPF<M_ITL triggers an
+      M_max f* probe), formula_guided's f* estimate stays ~peak and its onset search lands at
+      ~70 (gap_M ~22) rather than collapsing toward 56 (gap_M ~36) as a U-seeded f* would.
+      Either way it stays STRICTLY below both baselines on ttft-only (naive_max gap_M=164,
+      naive_ternary gap_M~127). Directionally: the high-seed decoupling of f* estimation from
+      the (undershooting) constraint bracket preserves the gap_M win in the one cell where the
+      bracket fails to contain M*, and keeps gap_f ~0 there.
+    mechanism: >-
+      RP-5: ttft_prefill is the full-occupancy, queue-wait-excluded prefill component, so
+      M_TPF lower-bounds where the realized TTFT constraint actually binds; the M/M/1 queue
+      wait lifts the true feasible frontier above U, putting the onset M*=92 above U=70. If f*
+      were probed at U=70 (below the plateau), the (1-eps)*f* threshold would be set too low
+      and the descent would stop early (too small M, here ~56). Probing f* at m_max (always on
+      the plateau, RP-3) fixes the threshold at the true peak, so the descent stops at the
+      genuine (1-eps) crossing. The M_TPF<M_ITL test (RP-7) is the primitive-decidable signal
+      that we are in the cell where U undershoots and high seeding is required.
+    diagnostic: >-
+      If ttft-only's gap_M is worse than both baselines, the high seed did not fire — assert
+      the M_TPF<M_ITL branch selected the m_max seed and print f(seed) vs f(70). If gap_f on
+      ttft-only exceeds epsilon, the lower bracket min(M_ITL,M_TPF) clipped above the onset
+      (M_ITL=95 > M*=92) — lower the bracket floor to M_TPF or m_min for the ttft cell.

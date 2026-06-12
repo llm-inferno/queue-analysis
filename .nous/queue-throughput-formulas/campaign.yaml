@@ -1,0 +1,37 @@
+research_question: 'Given the analytic primitives ITL(B), TTFT components, and tau(B)
+  for a vLLM-style inference server, derive M-hat(params) = argmax_M f(M) and design
+  a formula-guided search that pinpoints argmax_M f via few /target calls. Score on
+  (calls, gap_throughput_rel); see nous/description.txt for the full brief.
+
+  '
+run_id: queue-throughput-formulas
+max_iterations: 5
+models:
+  design: claude-opus-4-8
+target_system:
+  name: queue-analysis
+  description: "Go REST server (main.go) that solves a state-dependent Markovian queueing\
+    \ model of a vLLM inference server. Two endpoints on :8080:\n  - /solve  : analyze\
+    \ the queue at a given (RPS, MaxBatchSize, ...) and return\n              Throughput,\
+    \ AvgITL, AvgTTFT, etc.\n  - /target : find the maximum RPS that satisfies AvgITL\
+    \ <= TargetITL and\n              AvgTTFT <= TargetTTFT for a given MaxBatchSize,\
+    \ returning that\n              RPS as Throughput.\nSee examples/problem-data.json\
+    \ (input) and examples/solution-target.json (output) for the schemas.\n"
+  observable_metrics:
+  - throughput
+  - avgITL
+  - avgTTFT
+  - calls_to_target_per_search
+  - gap_throughput_rel
+  controllable_knobs:
+  - MaxBatchSize
+  - search_strategy_in_nous_harness_strategies
+  repo_path: /Users/tantawi/Projects/llm-inferno/queue-analysis
+prompts:
+  methodology_layer: prompts/methodology
+  domain_adapter_layer: null
+runtime:
+  target_repo: llm-inferno/queue-analysis
+  target_commit: aaa8a2699f992fce82c2344e577f92c8793ababc
+  nous_version: 0.1.0
+  started_at: '2026-06-11T21:11:08.439291+00:00'

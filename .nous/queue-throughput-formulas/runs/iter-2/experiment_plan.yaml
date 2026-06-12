@@ -1,0 +1,49 @@
+metadata:
+  iteration: 2
+  bundle_ref: "runs/iter-2/bundle.yaml"
+  description: >-
+    Iter-2 is a pure-analysis (observe) iteration. Single deterministic
+    validator (validate_regimes.py) computes all eight gate booleans from
+    analytic primitives only. No code changes, no oracle calls, no truth-cache
+    reads. All four arms share the single baseline run output.
+
+setup:
+  - cmd: "echo 'No build required. formulas.py is pure-math Python.'"
+    description: "No build step for observe iteration"
+
+arms:
+  - arm_id: "h-main"
+    conditions:
+      - name: "baseline"
+        cmd: "python3 .nous/queue-throughput-formulas/runs/iter-2/inputs/validate_regimes.py --scenarios nous/scenarios.json --out .nous/queue-throughput-formulas/runs/iter-2/results/baseline.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-2/results/baseline.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-2/inputs/validate_regimes.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"
+
+  - arm_id: "h-control-negative"
+    conditions:
+      - name: "baseline"
+        cmd: "python3 .nous/queue-throughput-formulas/runs/iter-2/inputs/validate_regimes.py --scenarios nous/scenarios.json --out .nous/queue-throughput-formulas/runs/iter-2/results/baseline.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-2/results/baseline.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-2/inputs/validate_regimes.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"
+
+  - arm_id: "h-robustness"
+    conditions:
+      - name: "baseline"
+        cmd: "python3 .nous/queue-throughput-formulas/runs/iter-2/inputs/validate_regimes.py --scenarios nous/scenarios.json --out .nous/queue-throughput-formulas/runs/iter-2/results/baseline.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-2/results/baseline.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-2/inputs/validate_regimes.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"
+
+  - arm_id: "h-ablation"
+    conditions:
+      - name: "baseline"
+        cmd: "python3 .nous/queue-throughput-formulas/runs/iter-2/inputs/validate_regimes.py --scenarios nous/scenarios.json --out .nous/queue-throughput-formulas/runs/iter-2/results/baseline.json"
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-2/results/baseline.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-2/inputs/validate_regimes.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"

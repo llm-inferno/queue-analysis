@@ -1,0 +1,160 @@
+[
+  {
+    "id": "RP-1",
+    "statement": "When nc(B)=1 for all B in [1,256], itl(B) is exactly affine in B with slope delta=(w_prefill(1)+w_decode)/(1+m), and the ITL-binding M can be computed in closed form: M_ITL=clamp(floor(1+(targetITL-itl(1))/delta),1,256), matching a brute scan with zero discrepancy.",
+    "confidence": "high",
+    "regime": "nc=1 throughout [1,256]; dev set (MaxNumTokens=8192 not exceeded by any batch)",
+    "evidence": [
+      "iteration-1-h-main",
+      "iteration-2-h-robustness",
+      "iteration-3-h-ablation"
+    ],
+    "contradicts": [],
+    "extraction_iteration": 2,
+    "mechanism": "Under nc=1, delta(B) is constant (formulas.py:72-76), making itl(B)=itl(1)+(B-1)*delta exactly affine. The closed-form inversion gives the exact integer crossing. Verified: boundary abs_err=0.0 on 4 of 6 scenarios, machine-epsilon (2.84e-14, 7.11e-15) on 2 — all < 1e-6. Iter-3: M_ITL values used by seed_lower (which seeds at M_ITL) are consistent with the oracle's gap_throughput_rel pattern — the occupancy gap is large precisely when M_ITL is small relative to M_truth.",
+    "applicability_bounds": "Requires nc(B)=1 for all B in the search range. Breaks when MaxBatchSize*AvgOutputTokens exceeds MaxNumTokens (8192) — then delta becomes piecewise and a single-slope inversion mis-estimates the crossing (RP-4). Not validated on benchmark grid (iter-5).",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-2",
+    "statement": "M_ITL is a lower bound on the oracle plateau-onset M*, not M* itself. Realized AvgITL averages over occupancy <=B, so AvgITL<=itl(B); the ITL SLO can be satisfied at batch sizes above M_ITL. The oracle-confirmed occupancy gap M_truth/M_ITL spans 1.59-2.83 on ITL-binding dev scenarios and is NOT a clean constant — fitting a single multiplicative correction is not viable.",
+    "confidence": "high",
+    "regime": "ITL-binding scenarios (itl_binds=true); oracle-confirmed on six dev scenarios (iter-3)",
+    "evidence": [
+      "iteration-1-h-main",
+      "iteration-2-h-main",
+      "iteration-3-h-main",
+      "iteration-3-h-ablation"
+    ],
+    "contradicts": [],
+    "extraction_iteration": 3,
+    "mechanism": "itl(B) computes the per-iteration time at a full batch of size B (worst-case). Actual AvgITL = integral of per-iter time weighted by occupancy distribution <= B, so the realized average is below itl(B). The ITL SLO is met for larger M than M_ITL predicts. Oracle-confirmed ratios: baseline 69/40=1.73, itl-only 17/8=2.13, alpha-low 170/107=1.59, alpha-high 17/6=2.83. Non-constant ratios preclude a single-c fit; the upper endpoint sidesteps this entirely on the throughput axis.",
+    "applicability_bounds": "Applies to all ITL-binding scenarios. The occupancy gap makes M_ITL throughput-pessimal (gap_rel up to 0.758 confirmed by oracle). For throughput-optimality, use the bracket upper endpoint instead (RP-8). For gap_M optimality, a per-scenario correction or refinement search is needed (deferred to iter-4/5).",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-3",
+    "statement": "Saturation throughput S(B)=1000*B/tau(B) is monotonically increasing and concave in B under nc=1, approaching the analytic ceiling S_inf=1000/((1+m)*delta) from below (ratio 0.75-0.96 at B=256 on dev scenarios). Throughput f(M) is non-decreasing in M and reaches a flat plateau that extends to M_MAX on the nc=1 dev set (peak-to-f(256) drop <= 0.0027 on all six).",
+    "confidence": "high",
+    "regime": "nc=1; dev scenarios; oracle-confirmed by naive_max ties (iter-3)",
+    "evidence": [
+      "iteration-1-h-main",
+      "iteration-3-h-control-negative"
+    ],
+    "contradicts": [],
+    "extraction_iteration": 3,
+    "mechanism": "tau(B) grows sub-linearly in B under nc=1 (formulas.py:83-86), so B/tau(B) is monotone increasing. The saturation ceiling follows from the affine limit of tau. The f-plateau reaching M_MAX is confirmed by naive_max (M=256, no formula) scoring gap_rel <= 0.0027 on all six, indistinguishable from seed_upper. Under nc=1, delta is constant and the plateau never turns back down within [1,256].",
+    "applicability_bounds": "nc=1 required. Under nc>1, tau(B) becomes super-linear past the first nc jump, S(B) peaks and then declines, and the plateau breaks — M_MAX can fall off the plateau (iter-5 benchmark regime). Saturation ceiling formula changes when nc>1.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-4",
+    "statement": "nc=1 is a NECESSARY condition for the ITL closed form to exactly match the brute scan. When nc(B) jumps within [1,256], delta changes at the jump and itl becomes piecewise-affine; a single-slope inversion from B=1 misestimates the crossing by up to one integer step.",
+    "confidence": "high",
+    "regime": "Scenarios where MaxBatchSize*AvgOutputTokens approaches MaxNumTokens=8192",
+    "evidence": [
+      "iteration-1-h-ablation",
+      "iteration-3-h-control-negative"
+    ],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "num_iterations_per_prefill(B) (formulas.py:44-56) is a step function of B*AvgOutputTokens/MaxNumTokens. When it jumps from 1 to 2, delta doubles, breaking the single-slope assumption. Iter-3: all six dev scenarios are nc=1 across [1,256] (verified via num_iterations_per_prefill probe); this is a dev-set property, not a law.",
+    "applicability_bounds": "Applies at any nc jump. On dev set nc=1 everywhere. On benchmark grid with larger tokens or batch sizes, nc>1 can occur and the plateau is expected to break (iter-5).",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-5",
+    "statement": "M_TPF (largest B with ttft_prefill(B)<=targetTTFT) is an UPPER bound on the TTFT-CONSTRAINT-binding M (where the queue solver's full TTFT first exceeds targetTTFT), NOT an upper bound on the throughput argmax M_truth. The bracket can miss M_truth (ttft-only: M_truth=92 > M_TPF=70) while seed_upper at M_TPF still scores near-zero gap_throughput_rel, because the plateau onset is below M_TPF.",
+    "confidence": "high",
+    "regime": "TTFT-binding scenarios (M_TPF < M_ITL ordering); oracle-confirmed on ttft-only (iter-3)",
+    "evidence": [
+      "iteration-1-h-main",
+      "iteration-2-h-main",
+      "iteration-3-h-robustness"
+    ],
+    "contradicts": [],
+    "extraction_iteration": 3,
+    "mechanism": "ttft_prefill(B) (formulas.py:93-96) excludes the queue wait by design. Full TTFT = ttft_prefill(B) + queue_wait(B). Since queue_wait >= 0, the true TTFT-constraint-binding M* <= M_TPF (RP-5 constraint-crossing bound, unchanged). BUT the throughput plateau onset M* can be below M_TPF — for ttft-only M_truth=92 is where throughput is maximized, and the plateau onset is well below 70, so evaluating at M_TPF=70 is already on the plateau. The bracket is a constraint-crossing bracket, not a throughput-argmax bracket.",
+    "applicability_bounds": "The constraint-crossing upper-bound direction (true M* <= M_TPF) is always true when queue_wait > 0. The throughput-robustness property (gap_rel(M_TPF) ~ 0 even when M_truth > M_TPF) holds as long as the plateau onset is below M_TPF — not guaranteed under nc>1 where the plateau may peak below M_TPF.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-6",
+    "statement": "The analytic primitives (itl, ttft_prefill, tau, delta) partition params-space into exactly THREE primitive-decidable cells, not four. The 'itl-only' and 'crossover' regimes are indistinguishable from primitives alone — they share an identical primitive signature (itl_binds=1, ttft_pf_binds=0, M_TPF>M_ITL) — because the deciding factor is the M/M/1 queue-wait term, which is absent from all primitives.",
+    "confidence": "high",
+    "regime": "All scenarios where ttft_pf_binds=false and itl_binds=true (itl-or-crossover fused cell)",
+    "evidence": [
+      "iteration-2-h-main",
+      "iteration-2-h-control-negative",
+      "iteration-3-h-main"
+    ],
+    "contradicts": [],
+    "extraction_iteration": 2,
+    "mechanism": "ttft_prefill(B) (formulas.py:93-96) excludes the queue wait. In itl-only (targetTTFT=400, loose), the queue wait never pushes TTFT above target. In alpha-low/crossover (targetTTFT=60, tight), the queue wait at small M pushes TTFT above target. Both have ttft_prefill slack to B=256 (M_TPF=256), so the prefill primitive cannot distinguish them. Iter-3: the oracle distinguishes them implicitly via gap_rel but the upper endpoint (seed_upper) is optimal for both cells simultaneously, so the split remains unneeded for throughput-optimal one-call seeding.",
+    "applicability_bounds": "Applies wherever targetTTFT is the distinguishing factor but ttft_prefill(256) <= targetTTFT (i.e., M_TPF=256). On the dev set the fused cell contains 4 of 6 scenarios (baseline, itl-only, alpha-low, alpha-high).",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-7",
+    "statement": "The relative ORDER of M_TPF and M_ITL — specifically whether M_TPF < M_ITL — is the load-bearing classification signal for the ttft-only regime. The two binding booleans (itl_binds, ttft_pf_binds) alone are insufficient: the ttft-only scenario binds on both (itl(256)>targetITL AND ttft_prefill(256)>targetTTFT), so a naive 2x2 on booleans misclassifies it as crossover. Only the ordering M_TPF < M_ITL, derived from the RP-2/RP-5 bound directions, correctly identifies TTFT as the first-binding constraint.",
+    "confidence": "high",
+    "regime": "Scenarios where both itl_binds=true and ttft_pf_binds=true but with different binding orders",
+    "evidence": [
+      "iteration-2-h-ablation",
+      "iteration-2-h-main",
+      "iteration-3-h-main"
+    ],
+    "contradicts": [],
+    "extraction_iteration": 2,
+    "mechanism": "M_TPF < M_ITL implies true_TTFT_M <= M_TPF < M_ITL <= true_ITL_M (from RP-2 lower bound and RP-5 upper bound). Therefore TTFT strictly binds before ITL regardless of the unknown queue wait. The ttft-only scenario: M_TPF=70, M_ITL=95 (70 < 95), confirmed. Iter-3: seed_upper routes ttft-only to the M_TPF=70 endpoint, scores gap_rel=0.000886 — consistent with the regime identification being correct.",
+    "applicability_bounds": "Requires nc=1 (so M_ITL and M_TPF are uniquely defined by affine inversion). The ttft-only cell boundary is the closed-form condition targetTTFT < ttft_prefill(M_ITL), confirmed exact iff on all 6 dev scenarios.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-8",
+    "statement": "Under nc=1, the throughput-optimal one-call seed for any scenario is the bracket UPPER endpoint U (unbounded->M_MAX=256, ttft-only->M_TPF, itl-or-crossover->min(M_TPF,M_MAX)), NOT the iter-2 lower endpoint M_ITL. U sits at or beyond the plateau onset M* in all three cells, yielding gap_throughput_rel <= 0.0027 on all six dev scenarios at exactly 1 oracle call. The lower endpoint M_ITL is throughput-pessimal on ITL-binding scenarios, with gap_rel up to 0.758.",
+    "confidence": "high",
+    "regime": "nc=1 dev set; six scenarios; oracle-confirmed (iter-3)",
+    "evidence": [
+      "iteration-3-h-main",
+      "iteration-3-h-ablation"
+    ],
+    "contradicts": [],
+    "extraction_iteration": 3,
+    "mechanism": "f(M) is non-decreasing in M up to the plateau onset M* (RP-3). The occupancy gap (RP-2) places M* strictly above M_ITL for ITL-binding scenarios. The upper endpoint U = min(M_TPF, M_MAX) is at or above M* for all three cells: for itl-or-crossover U = min(M_TPF, 256) >= M_ITL (by RP-7 ordering) and >= M* (since the plateau onset is between M_ITL and M_TPF by RP-2/RP-5); for ttft-only U = M_TPF and the plateau onset is below M_TPF; for unbounded U = 256 and f is non-decreasing. The harness always adds +1 confirmatory call (run.py:78-86), so any predict-and-confirm strategy with 0 internal calls costs exactly 1 total call.",
+    "applicability_bounds": "Under nc=1 (dev set). Under nc>1 (benchmark grid, iter-5), tau becomes super-linear past the first nc jump, S(B) peaks and then declines, and U=min(M_TPF,M_MAX) may overshoot past the (now finite) plateau peak — the strategy may then need a fallback (iter-4 guard). The throughput-equivalence of U and M_MAX (RP-9) also breaks under nc>1.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-9",
+    "statement": "On the nc=1 dev set, the degenerate strategy naive_max (return M_MAX=256, no formula) is throughput-equivalent to seed_upper (formula-guided bracket upper endpoint): max |gap_rel(naive_max) - gap_rel(seed_upper)| <= 0.001 across all six scenarios. The throughput axis CANNOT discriminate a formula-guided seed from constant M_MAX under nc=1. Formula precision earns its keep only when nc>1 makes the plateau finite (iter-5 benchmark).",
+    "confidence": "high",
+    "regime": "nc=1 dev set; six scenarios; oracle-confirmed (iter-3)",
+    "evidence": [
+      "iteration-3-h-control-negative"
+    ],
+    "contradicts": [],
+    "extraction_iteration": 3,
+    "mechanism": "Under nc=1, the f-plateau extends to M=256 on every dev scenario (99%-plateau reaches M_MAX, peak-to-f(256) drop <= 0.0027). Therefore M_MAX sits on the plateau and f(256) ~ f_truth, regardless of whether 256 was chosen by formula or by constant. The difference is: under nc>1, tau(B) goes super-linear past the first nc jump (formulas.py:72-76, nc>1 adds w_prefill*nc extra per token), S(B) peaks and declines, and M_MAX falls off the plateau while the formula seed min(M_TPF,M_MAX) may stay on it (or also overshoot — iter-5 will test this).",
+    "applicability_bounds": "Equivalence holds only under nc=1 (dev set). The decisive test is iter-5: run seed_upper and naive_max on the benchmark grid (bench/ directory, 30 scenarios with nc>1), where the plateau is expected to break and naive_max should score materially worse. Do not conclude the predictor is unnecessary from dev-set evidence alone.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  }
+]

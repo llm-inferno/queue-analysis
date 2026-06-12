@@ -1,0 +1,41 @@
+{
+  "iteration": 2,
+  "bundle_ref": "runs/iter-2/bundle.yaml",
+  "arms": [
+    {
+      "arm_type": "h-main",
+      "predicted": "The signed-bracket partition classifies all six dev scenarios consistently with their regime labels in exactly three primitive-decidable cells: (a) unbounded contains only the 'unbounded' scenario with M-hat=256; (b) ttft-only contains only the 'ttft-only' scenario with M-hat=M_TPF; (c) itl-or-crossover contains only scenarios labelled 'itl-only' or 'crossover', with point estimate M_ITL.",
+      "observed": "All six scenarios classified exactly as predicted. unbounded: {unbounded, M-hat=256, cell=unbounded}. ttft-only: {ttft-only, M_TPF=70 < M_ITL=95, M-hat=70, cell=ttft-only, bracket=[1,70]}. itl-or-crossover (4 scenarios): baseline (M-hat=40, bracket=[40,147]), itl-only (M-hat=8, bracket=[8,256]), alpha-low (M-hat=107, bracket=[107,256]), alpha-high (M-hat=6, bracket=[6,45]). Gates h_main_unbounded_exact=true, h_main_ttftonly_iff_order=true, h_main_fused_only_itl_crossover=true.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "ttft-only is the unique scenario with M_TPF < M_ITL (70 < 95). unbounded has itl_binds=false and ttft_pf_binds=false. All four remaining scenarios fall in itl-or-crossover with labels 'itl-only' or 'crossover' only."
+    },
+    {
+      "arm_type": "h-control-negative",
+      "predicted": "The itl-or-crossover cell is IRREDUCIBLE from primitives: at least one pair of differently-labelled scenarios shares primitive signature (itl_binds=1, ttft_pf_binds=0, M_TPF > M_ITL). Concretely itl-only and alpha-low/crossover both present signature (1, 0, +) yet carry different labels.",
+      "observed": "Confirmed exactly as predicted. indistinguishable_label_sets = {'(1, 0, 1)': ['crossover', 'itl-only']}. itl-only has primitive_signature=[1,0,1] (itl_binds=1, ttft_pf_binds=0, M_TPF=256>M_ITL=8). alpha-low has primitive_signature=[1,0,1] (itl_binds=1, ttft_pf_binds=0, M_TPF=256>M_ITL=107). Both scenarios share identical signature yet carry labels 'itl-only' and 'crossover' respectively. Gate h_control_fused_indistinguishable=true.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "This confirms that 4 primitive groups are NOT enough. The itl-only vs crossover split requires the queue-wait term (absent from all primitives), scoping that distinction to iter-3."
+    },
+    {
+      "arm_type": "h-robustness",
+      "predicted": "Both cell boundaries are closed-form and exact under nc=1: (a) ITL-unbounded threshold = itl(256) with abs_err < 1e-6 on all six; (b) ttft-only iff M_TPF < M_ITL iff targetTTFT < ttft_prefill(M_ITL) on all six; (c) lowering baseline targetTTFT below ttft_prefill(M_ITL=40)=28.114 flips it into ttft-only.",
+      "observed": "(a) ITL boundary abs_err: baseline=0.0, itl-only=0.0, ttft-only=2.84e-14, unbounded=0.0, alpha-low=7.11e-15, alpha-high=0.0 — all < 1e-6. (b) ttft-only iff holds on all six scenarios: iff_holds=true for all. (c) perturbation_baseline_ttft: ttft_threshold=28.114, below_cell='ttft-only', above_cell='itl-or-crossover', flips_at_threshold=true. Gates h_robustness_itl_boundary_exact=true, h_robustness_ttftonly_iff=true, h_robustness_perturbation_flips=true.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "Floating-point errors are at machine-epsilon level (2.84e-14, 7.11e-15), far below the 1e-6 threshold, confirming exact affineness under nc=1 (constant delta). The perturbation flip at exactly ttft_prefill(M_ITL=40)=28.114 validates the closed-form boundary equation."
+    },
+    {
+      "arm_type": "h-ablation",
+      "predicted": "Removing the M_TPF < M_ITL ordering (naive 2x2 on binding booleans alone) misclassifies ttft-only as crossover (itl_binds=1 AND ttft_pf_binds=1), while the signed partition correctly identifies it. The naive 2x2 produces strictly more label mismatches.",
+      "observed": "naive_2x2_mismatches = {'ttft-only': 'crossover', 'alpha-low': 'itl-only'}. ttft-only is misclassified as crossover by the naive 2x2 (both binding booleans true). alpha-low is misclassified as itl-only by naive 2x2 (ttft_pf_binds=false so it incorrectly infers itl-only). The signed partition correctly assigns ttft-only to the ttft-only cell and alpha-low to itl-or-crossover. Gate h_ablation_ttftonly_lost_without_order=true.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "The naive 2x2 produces 2 mismatches vs 0 for the signed partition, confirming that the M_TPF < M_ITL ordering (encoding RP-2/RP-5 bound directions) is the load-bearing component. Discarding it loses the one extra cell split that primitives CAN make."
+    }
+  ],
+  "experiment_valid": true,
+  "discrepancy_analysis": "All four arms confirmed with zero directional errors. The 3-cell signed-bracket partition is label-consistent on all six dev scenarios. The two boundary equations are closed-form and exact under nc=1. The fused cell is irreducible from primitives (confirmed by shared primitive signatures across different labels). The M_TPF < M_ITL ordering is necessary and sufficient for the ttft-only cell. No oracle calls, no truth-cache reads, no code changes — observe iteration constraints fully satisfied.",
+  "dominant_component_pct": null
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "scenario": "baseline",
+    "strategy": "formula_guided",
+    "M_chosen": 67,
+    "calls": 8,
+    "throughput_chosen": 1.9037623,
+    "M_truth": 69,
+    "throughput_truth": 1.9232237,
+    "gap_throughput_rel": 0.010119155665563076,
+    "gap_M": 2,
+    "wall_clock_seconds": 0.016729958006180823,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "itl-only",
+    "strategy": "formula_guided",
+    "M_chosen": 17,
+    "calls": 6,
+    "throughput_chosen": 0.12606688,
+    "M_truth": 17,
+    "throughput_truth": 0.12606688,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.011870082991663367,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "ttft-only",
+    "strategy": "formula_guided",
+    "M_chosen": 72,
+    "calls": 8,
+    "throughput_chosen": 4.5206575,
+    "M_truth": 92,
+    "throughput_truth": 4.5229764,
+    "gap_throughput_rel": 0.0005126933671375512,
+    "gap_M": 20,
+    "wall_clock_seconds": 0.011832999996840954,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "unbounded",
+    "strategy": "formula_guided",
+    "M_chosen": 256,
+    "calls": 2,
+    "throughput_chosen": 121.4636,
+    "M_truth": 256,
+    "throughput_truth": 121.4636,
+    "gap_throughput_rel": 0.0,
+    "gap_M": 0,
+    "wall_clock_seconds": 0.0023329160030698404,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "alpha-low",
+    "strategy": "formula_guided",
+    "M_chosen": 161,
+    "calls": 8,
+    "throughput_chosen": 5.121447,
+    "M_truth": 170,
+    "throughput_truth": 5.173009,
+    "gap_throughput_rel": 0.009967506339153972,
+    "gap_M": 9,
+    "wall_clock_seconds": 0.014625041992985643,
+    "internal_solve_calls": 0
+  },
+  {
+    "scenario": "alpha-high",
+    "strategy": "formula_guided",
+    "M_chosen": 16,
+    "calls": 6,
+    "throughput_chosen": 0.27932727,
+    "M_truth": 17,
+    "throughput_truth": 0.2797425,
+    "gap_throughput_rel": 0.0014843293385881254,
+    "gap_M": 1,
+    "wall_clock_seconds": 0.008220999996410683,
+    "internal_solve_calls": 0
+  }
+]

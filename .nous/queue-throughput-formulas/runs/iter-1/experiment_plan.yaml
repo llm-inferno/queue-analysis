@@ -1,0 +1,57 @@
+metadata:
+  iteration: 1
+  bundle_ref: "runs/iter-1/bundle.yaml"
+  description: "observe — single deterministic command; all four arm assertions evaluated from one baseline.json"
+
+setup:
+  - cmd: "# No build required — nous/harness/formulas.py is pure-math Python; no server needed for iter-1"
+    description: "No-op build step (observe iteration)"
+
+arms:
+  - arm_id: "h-main"
+    conditions:
+      - name: "baseline"
+        cmd: >-
+          python3 .nous/queue-throughput-formulas/runs/iter-1/inputs/validate_predictors.py
+          --scenarios nous/scenarios.json
+          --out .nous/queue-throughput-formulas/runs/iter-1/results/baseline.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-1/results/baseline.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-1/inputs/validate_predictors.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"
+
+  - arm_id: "h-control-negative"
+    conditions:
+      - name: "baseline"
+        cmd: >-
+          python3 .nous/queue-throughput-formulas/runs/iter-1/inputs/validate_predictors.py
+          --scenarios nous/scenarios.json
+          --out .nous/queue-throughput-formulas/runs/iter-1/results/baseline.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-1/results/baseline.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-1/inputs/validate_predictors.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"
+
+  - arm_id: "h-ablation"
+    conditions:
+      - name: "baseline"
+        cmd: >-
+          python3 .nous/queue-throughput-formulas/runs/iter-1/inputs/validate_predictors.py
+          --scenarios nous/scenarios.json
+          --out .nous/queue-throughput-formulas/runs/iter-1/results/baseline.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-1/results/baseline.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-1/inputs/validate_predictors.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"
+
+  - arm_id: "h-robustness"
+    conditions:
+      - name: "baseline"
+        cmd: >-
+          python3 .nous/queue-throughput-formulas/runs/iter-1/inputs/validate_predictors.py
+          --scenarios nous/scenarios.json
+          --out .nous/queue-throughput-formulas/runs/iter-1/results/baseline.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-1/results/baseline.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-1/inputs/validate_predictors.py"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/nous/scenarios.json"

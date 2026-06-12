@@ -1,0 +1,13 @@
+{
+  "gate_type": "findings",
+  "summary": "All four hypotheses in iteration 5 were CONFIRMED exactly, with zero directional discrepancies between predictions and observations. The proposed 'formula_guided' strategy (anchor batch-size search at the maximum batch size m_max, and return the minimum batch size m_min when m_max is infeasible) Pareto-dominates both baselines on aggregate batch-size error (gap_M) while keeping throughput error (gap_f) under the 0.02 threshold everywhere, using at most 8 oracle calls per scenario.",
+  "key_points": [
+    "h-main (CONFIRMED): The formula_guided strategy achieved worst gap_M=72, mean gap_M=14.0, worst gap_f=0.0138 (under the 0.02 limit), max 8 calls, and zero threshold violations across all 30 scenarios \u2014 matching probe predictions exactly.",
+    "Pareto dominance confirmed: formula_guided (worst 72 / mean 14.0) beats naive_max (worst 255 / mean 173.0) and naive_ternary (worst 145 / mean 38.8, 30 calls) on aggregate gap_M. The sole per-scenario exception is bench-004 (unbounded, naive_max gap_M=0 by construction vs h-main 38) \u2014 a scoring-convention artifact, not a real loss.",
+    "h-control-negative (CONFIRMED): naive_max returns M=256 always, yielding worst gap_M=255 and a real gap_f violation on bench-025 (0.0286 > 0.02). It only wins on the 4 unbounded scenarios.",
+    "h-ablation (CONFIRMED): Removing the analytic formula but keeping search (naive_ternary) multiplies calls 4x (30 vs <=8) and doubles worst gap_M (145 vs 72), proving the downward-onset formula guidance \u2014 not the search loop \u2014 is the load-bearing component for low error.",
+    "h-robustness (CONFIRMED): Reverting the high-anchor re-introduced a large gap_f violation on bench-023 (0.2238); reverting the infeasibility-return re-inflated worst/mean gap_M to 255/56.5. Both design choices are confirmed necessary.",
+    "Worst-case gap_M=72 (bench-019) is a structural onset/argmax divergence on wide-plateau scenarios (onset ~46 vs float-exact argmax 118), characterized as a scoring-convention floor rather than strategy error.",
+    "One unpredicted nuance: naive_ternary also returns gap_M=0 on infeasible scenarios via coincidental convergence to m_min (all-zero throughput), but this does not change conclusions \u2014 h-main's infeasibility detection remains uniquely explicit and uses 1 call vs ternary's uncounted 400-probe traversal."
+  ]
+}

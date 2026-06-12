@@ -1,0 +1,41 @@
+{
+  "iteration": 5,
+  "bundle_ref": "runs/iter-5/bundle.yaml",
+  "arms": [
+    {
+      "arm_type": "h-main",
+      "predicted": "On all 30 benchmark scenarios the benchmark-robust formula_guided (always anchor f* at m_max; on infeasible m_max seed return m_min) Pareto-dominates BOTH baselines in aggregate gap_M while holding gap_f <= 0.02 everywhere at worst-case calls <= 8. Probe predictions: worst gap_M=72, mean gap_M=14.0, worst gap_f=0.0138, calls<=8, zero violations.",
+      "observed": "CONFIRMED exactly. worst_gap_M=72 (bench-019: M_chosen=46 vs M_truth=118, onset/argmax divergence on wide plateau), mean_gap_M=14.0, worst_calls=8, worst_gap_f=0.0138, zero gap_f violations. Pareto-dominates naive_max (worst 255, mean 173.0) and naive_ternary (worst 145, mean 38.8, 30 calls) in aggregate gap_M. Sole per-scenario exception: bench-004 (unbounded, argmax=256, naive_max gap_M=0 by construction vs h-main gap_M=38) — scoring-convention artifact. Per-regime: infeasible(5) gap_M=0 via infeasibility detection; interior-peak bench-025 gap_M=0 (h-main is only feasibility-safe strategy there); unbounded(4) worst gap_M=38; normal(20) worst gap_M=72/mean=19.1.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "The worst-case gap_M=72 on bench-019 is the structural onset/argmax divergence floor (h-main finds onset~46, argmax=118); this is not strategy error but a scoring-convention artifact on wide-plateau scenarios where the float-exact argmax sits well above the 0.98-onset. naive_ternary also returns gap_M=0 on infeasible scenarios (ternary search converges to lo=m_min when all throughputs=0), but this is coincidental — h-main detects infeasibility in 1 call vs ternary's 0-counted 400-probe traversal."
+    },
+    {
+      "arm_type": "h-control-negative",
+      "predicted": "naive_max returns M=256; maximal aggregate gap_M (probe worst 255, mean 173.0); violates gap_f on bench-025 (gap_f~0.0286 > 0.02) due to nc-jump interior-peak. Only wins gap_M=0 on 4 unbounded scenarios where argmax=m_max.",
+      "observed": "CONFIRMED exactly. worst_gap_M=255 (infeasible scenarios: M_truth=1, M_chosen=256), mean_gap_M=173.0, worst_calls=1, gap_f violation on bench-025 (gap_f=0.0286). Per-regime: infeasible(5) gap_M=255 (worst in class); bench-025 gap_M=250 + gap_f violation; unbounded(4) gap_M=0 (only regime where naive_max wins).",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": null
+    },
+    {
+      "arm_type": "h-ablation",
+      "predicted": "naive_ternary lands on plateau (gap_f~0 monotone) but inflates calls (~30) and gap_M (worst 145, mean 38.8); still violates gap_f on bench-025. Isolates formula guidance (not search) as the source of low gap_M.",
+      "observed": "CONFIRMED exactly. worst_gap_M=145, mean_gap_M=38.8, worst_calls=30, gap_f violation on bench-025 (gap_f=0.0286). Per-regime: infeasible(5) gap_M=0 coincidentally (ternary converges to lo=m_min on all-zero throughput); interior-peak bench-025 gap_M=136 + gap_f violation; unbounded(4) gap_M=0 (ternary finds high plateau); normal(20) worst gap_M=145/mean=51.4 (fails to target onset). Removing formula while keeping search multiplies calls 4x (30 vs <=8) and inflates worst gap_M 2x (145 vs 72), confirming the analytic downward-onset targeting is the load-bearing component for low gap_M.",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "naive_ternary returns gap_M=0 on infeasible scenarios because when all target_eval calls return throughput=0, f1==f2 at every ternary step so hi always narrows (else branch), converging to lo=m_min=1=M_truth. This is a behavioral coincidence, not an explicit infeasibility check — calls stay 0 because 400 responses are not counted by oracle.py."
+    },
+    {
+      "arm_type": "h-robustness",
+      "predicted": "(A) Reverting high-anchor re-introduces gap_f violation on bench-023 (~0.22); (B) reverting infeasibility return re-inflates worst/mean gap_M to ~255/~56.5 via infeasible scenarios. Full h-main holds gap_f<=epsilon and gap_M=0 on bench-025.",
+      "observed": "CONFIRMED exactly. (A) ablate_anchor: bench-023 gap_f=0.2238 (restored violation, confirms high-anchor is load-bearing for occupancy-gap regime), worst_gap_M=72 (unchanged on feasible scenarios), zero other violations. (B) ablate_infeasible: worst_gap_M=255, mean_gap_M=56.5 (re-inflated via 5 infeasible scenarios all returning M=256), gap_f clean (0.0138, no violations), all feasible-scenario metrics identical to h-main. Full h-main: bench-025 gap_M=0 (starts descent at m_max, 2.86% below peak, threshold still satisfied first at M=6 onset), gap_f=0 (below threshold since bench-025 is classified as interior-peak and gap_f is computed against throughput_truth at M=6).",
+      "status": "CONFIRMED",
+      "error_type": null,
+      "diagnostic_note": "The bench-023 violation mechanism: iter-4 U-seed selects U=max(M_ITL,M_TPF)=9 (occupancy gap RP-2 makes realized throughput climb far past binding B); f*(9) << f*(57=peak), threshold too low, descent terminates at M=9 (gap_f=0.2238). High-anchor reads f*(256)≈f*(57) and the descent correctly finds onset~13, gap_f=0.0037. The bench-025 robustness holds because the nc-jump depresses f(256) only 2.86% below the M=6 peak — within 1-EPS/2=0.99 multiplied by f*(256), threshold is still satisfied at M=6."
+    }
+  ],
+  "experiment_valid": true,
+  "discrepancy_analysis": "All four predictions confirmed exactly, with zero directional discrepancies. All probe values (worst gap_M=72, mean=14.0, worst_calls=8, worst_gap_f=0.0138; naive_max worst=255/mean=173; naive_ternary worst=145/mean=38.8/calls=30; ablate-anchor bench-023=0.2238; ablate-infeasible worst=255/mean=56.5) match the pre-run predictions from the designer handoff. The one nuance not predicted: naive_ternary also returns gap_M=0 on infeasible scenarios (coincidental convergence to m_min on all-zero throughput), not just h-main — this does not change any conclusions since h-main's infeasibility detection is still unique in being explicit and in 1 call rather than 0-counted 400 probes. The naive_ternary and naive_max bench-025 gap_f=0.0286 (identical) confirms both strategies share the same non-monotone trap.",
+  "dominant_component_pct": null
+}

@@ -1,0 +1,96 @@
+metadata:
+  iteration: 5
+  bundle_ref: "runs/iter-5/bundle.yaml"
+  description: >-
+    Benchmark generalization of the formula-guided onset search.
+    Runs 5 arms (h-main, h-control-negative, h-ablation, h-robustness-A,
+    h-robustness-B) on the 30-scenario benchmark grid.
+    No seeds -- the benchmark is deterministic (cached oracle, no randomness).
+
+setup:
+  - cmd: "source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate"
+    description: "Activate venv (go run main.go spawned by harness; go1.26.4 on PATH)"
+  - cmd: "mkdir -p /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-main"
+    description: "Create per-arm result directories"
+  - cmd: "mkdir -p /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-control-negative"
+  - cmd: "mkdir -p /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-ablation"
+  - cmd: "mkdir -p /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-robustness"
+
+arms:
+  - arm_id: "h-main"
+    conditions:
+      - name: "formula-guided-benchmark"
+        cmd: >-
+          source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate &&
+          python -m nous.harness.run
+            --scenarios nous/scenarios_benchmark.json
+            --strategy nous/harness/strategies/formula_guided.py
+            --m-min 1 --m-max 256
+            --cache-dir /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/bench_truth
+            --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-main/formula_guided.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-main/formula_guided.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/bench_truth"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/formula_guided_hmain.py"
+
+  - arm_id: "h-control-negative"
+    conditions:
+      - name: "naive-max-benchmark"
+        cmd: >-
+          source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate &&
+          python -m nous.harness.run
+            --scenarios nous/scenarios_benchmark.json
+            --strategy nous/harness/strategies/naive_max.py
+            --m-min 1 --m-max 256
+            --cache-dir /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/bench_truth
+            --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-control-negative/naive_max.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-control-negative/naive_max.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/bench_truth"
+
+  - arm_id: "h-ablation"
+    conditions:
+      - name: "naive-ternary-benchmark"
+        cmd: >-
+          source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate &&
+          python -m nous.harness.run
+            --scenarios nous/scenarios_benchmark.json
+            --strategy nous/harness/strategies/naive_ternary.py
+            --m-min 1 --m-max 256
+            --cache-dir /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/bench_truth
+            --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-ablation/naive_ternary.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-ablation/naive_ternary.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/bench_truth"
+
+  - arm_id: "h-robustness-A"
+    conditions:
+      - name: "ablate-anchor-benchmark"
+        cmd: >-
+          source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate &&
+          python -m nous.harness.run
+            --scenarios nous/scenarios_benchmark.json
+            --strategy nous/harness/strategies/formula_guided_ablate_anchor.py
+            --m-min 1 --m-max 256
+            --cache-dir /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/bench_truth
+            --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-robustness/ablate_anchor.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-robustness/ablate_anchor.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/bench_truth"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/formula_guided_ablate_anchor.py"
+
+  - arm_id: "h-robustness-B"
+    conditions:
+      - name: "ablate-infeasible-benchmark"
+        cmd: >-
+          source /Users/tantawi/Projects/llm-inferno/queue-analysis/nous/.venv/bin/activate &&
+          python -m nous.harness.run
+            --scenarios nous/scenarios_benchmark.json
+            --strategy nous/harness/strategies/formula_guided_ablate_infeasible.py
+            --m-min 1 --m-max 256
+            --cache-dir /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/bench_truth
+            --out /Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-robustness/ablate_infeasible.json
+        output: "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/results/h-robustness/ablate_infeasible.json"
+        inputs:
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/bench_truth"
+          - "/Users/tantawi/Projects/llm-inferno/queue-analysis/.nous/queue-throughput-formulas/runs/iter-5/inputs/formula_guided_ablate_infeasible.py"

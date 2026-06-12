@@ -1,0 +1,11 @@
+{
+  "gate_type": "design",
+  "summary": "This iteration tests whether a formula-guided downward search can pinpoint the smallest batch size M* where queue throughput first plateaus (within epsilon=0.02), beating two baselines on the concurrency metric gap_M while keeping throughput feasibility (gap_f <= 0.02) and staying under 8 /target API calls. The key reframe: any large M (including M_max=256) ties on throughput, so the real win is provisioning the minimum batch \u2014 measured by gap_M, not throughput.",
+  "key_points": [
+    "Four arms across the six dev scenarios: h-main (formula_guided) is the deliverable \u2014 it probes a high seed for the peak throughput f*, then binary-searches downward (bracketed by the closed-form lower bound M_ITL) for the smallest M with throughput >= (1 - epsilon/2)*f*.",
+    "h-control-negative (naive_max) always returns 256: predicted gap_f <= 0.0027 in 1 call (throughput-perfect) but maximal gap_M (worst 239), proving the throughput axis cannot reward precision. h-ablation (naive_ternary) keeps generic search but drops the formula: predicted to stay feasible yet land on an interior plateau point (worst gap_M ~127) at ~25-30 calls \u2014 isolating analytic onset-targeting as the cause of cheap, low gap_M.",
+    "CONFIRM: formula_guided's worst-case gap_M is strictly below BOTH baselines (sim worst ~22 on ttft-only, <=9 elsewhere) AND gap_f stays <= 0.02 on all six AND calls <= 8. REFUTE: if formula_guided's gap_M ties/exceeds naive_ternary on any scenario, or gap_f exceeds 0.02, or calls exceed 8.",
+    "h-robustness stresses the one hard cell (ttft-only) where the closed-form upper endpoint M_TPF=70 undershoots the true onset M*=92; a cell-aware high-seed (triggered when M_TPF < M_ITL) probes f* at M_max to keep the search threshold anchored to the true peak. Note a flagged edge risk: M_ITL=95 actually exceeds M*=92 here, so the lower bracket could clip the answer \u2014 diagnostics specify falling back to min(M_ITL, M_TPF).",
+    "Predicted headline result: replacing the constant/ternary target with formula-guided downward onset search reduces gap_M by roughly an order of magnitude (from ~127-239 down to ~22) while holding throughput feasibility and cutting calls 3-5x."
+  ]
+}

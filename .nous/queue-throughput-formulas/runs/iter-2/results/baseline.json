@@ -1,0 +1,237 @@
+{
+  "iteration": 2,
+  "stage": "observe",
+  "oracle_calls": 0,
+  "truth_cache_reads": 0,
+  "per_scenario": {
+    "baseline": {
+      "itl_binds": true,
+      "ttft_pf_binds": true,
+      "M_ITL": 40,
+      "M_TPF": 147,
+      "M_TPF_lt_M_ITL": false,
+      "cell": "itl-or-crossover",
+      "m_hat": 40,
+      "bracket": [
+        40,
+        147
+      ],
+      "primitive_signature": [
+        1,
+        1,
+        1
+      ],
+      "regime_label": "crossover",
+      "naive_2x2_label": "crossover"
+    },
+    "itl-only": {
+      "itl_binds": true,
+      "ttft_pf_binds": false,
+      "M_ITL": 8,
+      "M_TPF": 256,
+      "M_TPF_lt_M_ITL": false,
+      "cell": "itl-or-crossover",
+      "m_hat": 8,
+      "bracket": [
+        8,
+        256
+      ],
+      "primitive_signature": [
+        1,
+        0,
+        1
+      ],
+      "regime_label": "itl-only",
+      "naive_2x2_label": "itl-only"
+    },
+    "ttft-only": {
+      "itl_binds": true,
+      "ttft_pf_binds": true,
+      "M_ITL": 95,
+      "M_TPF": 70,
+      "M_TPF_lt_M_ITL": true,
+      "cell": "ttft-only",
+      "m_hat": 70,
+      "bracket": [
+        1,
+        70
+      ],
+      "primitive_signature": [
+        1,
+        1,
+        -1
+      ],
+      "regime_label": "ttft-only",
+      "naive_2x2_label": "crossover"
+    },
+    "unbounded": {
+      "itl_binds": false,
+      "ttft_pf_binds": false,
+      "M_ITL": 256,
+      "M_TPF": 256,
+      "M_TPF_lt_M_ITL": false,
+      "cell": "unbounded",
+      "m_hat": 256,
+      "bracket": [
+        256,
+        256
+      ],
+      "primitive_signature": [
+        0,
+        0,
+        0
+      ],
+      "regime_label": "unbounded",
+      "naive_2x2_label": "unbounded"
+    },
+    "alpha-low": {
+      "itl_binds": true,
+      "ttft_pf_binds": false,
+      "M_ITL": 107,
+      "M_TPF": 256,
+      "M_TPF_lt_M_ITL": false,
+      "cell": "itl-or-crossover",
+      "m_hat": 107,
+      "bracket": [
+        107,
+        256
+      ],
+      "primitive_signature": [
+        1,
+        0,
+        1
+      ],
+      "regime_label": "crossover",
+      "naive_2x2_label": "itl-only"
+    },
+    "alpha-high": {
+      "itl_binds": true,
+      "ttft_pf_binds": true,
+      "M_ITL": 6,
+      "M_TPF": 45,
+      "M_TPF_lt_M_ITL": false,
+      "cell": "itl-or-crossover",
+      "m_hat": 6,
+      "bracket": [
+        6,
+        45
+      ],
+      "primitive_signature": [
+        1,
+        1,
+        1
+      ],
+      "regime_label": "crossover",
+      "naive_2x2_label": "crossover"
+    }
+  },
+  "boundary_itl_unbounded": {
+    "baseline": {
+      "closed_form_thr": 84.01211830487807,
+      "itl_256": 84.01211830487807,
+      "abs_err": 0.0
+    },
+    "itl-only": {
+      "closed_form_thr": 213.38331368672203,
+      "itl_256": 213.38331368672203,
+      "abs_err": 0.0
+    },
+    "ttft-only": {
+      "closed_form_thr": 148.1501465466926,
+      "itl_256": 148.15014654669258,
+      "abs_err": 2.842170943040401e-14
+    },
+    "unbounded": {
+      "closed_form_thr": 15.941432523255815,
+      "itl_256": 15.941432523255815,
+      "abs_err": 0.0
+    },
+    "alpha-low": {
+      "closed_form_thr": 42.264082914634145,
+      "itl_256": 42.26408291463415,
+      "abs_err": 7.105427357601002e-15
+    },
+    "alpha-high": {
+      "closed_form_thr": 168.54028413414633,
+      "itl_256": 168.54028413414633,
+      "abs_err": 0.0
+    }
+  },
+  "boundary_ttftonly": {
+    "baseline": {
+      "M_ITL": 40,
+      "ttft_pf_at_M_ITL": 28.11444448780488,
+      "targetTTFT": 60.0,
+      "order_says_ttftonly": false,
+      "boundary_says_ttftonly": false,
+      "iff_holds": true
+    },
+    "itl-only": {
+      "M_ITL": 8,
+      "ttft_pf_at_M_ITL": 22.149249593361,
+      "targetTTFT": 400.0,
+      "order_says_ttftonly": false,
+      "boundary_says_ttftonly": false,
+      "iff_holds": true
+    },
+    "ttft-only": {
+      "M_ITL": 95,
+      "ttft_pf_at_M_ITL": 93.64254580544747,
+      "targetTTFT": 80.0,
+      "order_says_ttftonly": true,
+      "boundary_says_ttftonly": true,
+      "iff_holds": true
+    },
+    "unbounded": {
+      "M_ITL": 256,
+      "ttft_pf_at_M_ITL": 17.001661023255814,
+      "targetTTFT": 2000.0,
+      "order_says_ttftonly": false,
+      "boundary_says_ttftonly": false,
+      "iff_holds": true
+    },
+    "alpha-low": {
+      "M_ITL": 107,
+      "ttft_pf_at_M_ITL": 24.240190439024392,
+      "targetTTFT": 60.0,
+      "order_says_ttftonly": false,
+      "boundary_says_ttftonly": false,
+      "iff_holds": true
+    },
+    "alpha-high": {
+      "M_ITL": 6,
+      "ttft_pf_at_M_ITL": 36.30237346341464,
+      "targetTTFT": 60.0,
+      "order_says_ttftonly": false,
+      "boundary_says_ttftonly": false,
+      "iff_holds": true
+    }
+  },
+  "perturbation_baseline_ttft": {
+    "baseline_M_ITL": 40,
+    "ttft_threshold": 28.11444448780488,
+    "below_cell": "ttft-only",
+    "above_cell": "itl-or-crossover",
+    "flips_at_threshold": true
+  },
+  "naive_2x2_mismatches": {
+    "ttft-only": "crossover",
+    "alpha-low": "itl-only"
+  },
+  "indistinguishable_label_sets": {
+    "(1, 0, 1)": [
+      "crossover",
+      "itl-only"
+    ]
+  },
+  "gates": {
+    "h_main_unbounded_exact": true,
+    "h_main_ttftonly_iff_order": true,
+    "h_main_fused_only_itl_crossover": true,
+    "h_control_fused_indistinguishable": true,
+    "h_robustness_itl_boundary_exact": true,
+    "h_robustness_ttftonly_iff": true,
+    "h_robustness_perturbation_flips": true,
+    "h_ablation_ttftonly_lost_without_order": true
+  }
+}

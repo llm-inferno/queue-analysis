@@ -1,0 +1,11 @@
+{
+  "gate_type": "findings",
+  "summary": "All four hypothesis arms were CONFIRMED with zero directional errors against the live oracle. The central reframe \u2014 that the bracket's UPPER endpoint (not the lower M_ITL endpoint) is the throughput-optimal one-call seed \u2014 is validated: seed_upper achieves near-zero throughput gap (gap_rel <= 0.0027) on all six dev scenarios at exactly 1 oracle call.",
+  "key_points": [
+    "h-main CONFIRMED: seed_upper gap_rel stayed at or below 0.0027 across all six scenarios (baseline=0.000125, itl-only=0.002729, ttft-only=0.000886, unbounded=0.0, alpha-low=6.74e-05, alpha-high=9.37e-05), all well under the ~0.005 threshold, at 1 call each. seed_upper beat or tied seed_lower everywhere.",
+    "h-ablation CONFIRMED: the lower endpoint (M_ITL) is materially worse on the four ITL-binding scenarios \u2014 e.g., alpha-high gap_rel 0.7580 (lower) vs 9.37e-05 (upper), itl-only 0.4831 vs 0.002729. This pins the gain to the upper endpoint, driven by the occupancy ratio M_truth/M_ITL spanning 1.59 to 2.83.",
+    "h-control-negative CONFIRMED (important caveat): a naive constant M_MAX=256 ties seed_upper to within ~0.001 on the nc=1 dev set. The throughput axis CANNOT yet distinguish the precise formula from a dumb constant; discrimination requires the planned nc>1 benchmark in iter-5.",
+    "h-robustness CONFIRMED with a correction: for ttft-only the bracket misses the true argmax (M_truth=92 falls outside [70,95]), yet gap_rel is still 0.000886 because the throughput plateau starts below 70. This corrects RP-5: M_TPF bounds the TTFT-constraint crossing, not the throughput argmax.",
+    "No infeasible confirmatory calls occurred (throughput>0 everywhere), so the iter-4 queue-infeasibility guard is precautionary rather than urgent on this dev set."
+  ]
+}

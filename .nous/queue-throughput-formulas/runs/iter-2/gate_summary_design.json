@@ -1,0 +1,14 @@
+{
+  "gate_type": "design",
+  "summary": "Iteration 2 is a pure-analysis (observe) step that tests whether the params-space of the optimal batch size M* can be partitioned into a small number of regime cells using ONLY the analytic primitives in formulas.py (itl, ttft_prefill, tau, delta) plus the iter-1 bound directions \u2014 with no oracle (/target) calls, no truth-cache reads, and no code changes. The central question is blunt: are 4 regime groups enough, or is a queue-wait term provably required?",
+  "key_points": [
+    "What/why: Build a 'signed-bracket' classifier from two iter-1 facts \u2014 M_ITL is a LOWER bound on the ITL-binding M*, M_TPF is an UPPER bound on the TTFT-binding M* \u2014 to sort scenarios into closed-form cells, then check how many cells the primitives can actually decide.",
+    "Experiments: Validate against formulas.py only on the 6 dev scenarios. h-main predicts exactly 3 primitive-decidable cells \u2014 'unbounded' (neither constraint binds, M-hat=256), 'ttft-only' (M_TPF < M_ITL, M-hat=M_TPF), and a fused 'itl-or-crossover' cell (M_ITL <= M_TPF, point estimate M_ITL).",
+    "Confirm h-main: all 6 scenarios land in the predicted cell consistent with their labels; the unbounded scenario shows no binding constraint and ttft-only is the unique cell where the TTFT upper bound falls below the ITL lower bound.",
+    "Key negative control (h-control-negative): the fused cell is predicted to be IRREDUCIBLE \u2014 'itl-only' and the 'alpha-low' crossover share an identical primitive signature (itl_binds=1, ttft_pf_binds=0, M_TPF=256 > M_ITL) yet carry different labels. If true, no primitive-only classifier can separate them, proving 4 groups are NOT enough and the queue-wait term is needed (scoped to iter-3).",
+    "Robustness (h-robustness): cell boundaries should be exact closed-form identities under nc=1 \u2014 the unbounded/ITL threshold targetITL* = itl(1)+(M_MAX-1)*delta(1) should equal itl(256) within 1e-6, and lowering 'baseline' targetTTFT below ttft_prefill(M_ITL=40)=28.114 should flip it into the ttft-only cell at the predicted threshold.",
+    "Ablation (h-ablation): dropping the bound-direction ordering (M_TPF < M_ITL) and using only the two binding booleans (naive 2x2) should misclassify the ttft-only scenario as crossover (it binds on both: itl(256)=148>60, ttft_prefill(256)=182>80), showing the ORDERING \u2014 not the booleans \u2014 is the load-bearing element.",
+    "Refutation triggers: any non-ttft-only scenario with M_TPF < M_ITL, an unbounded scenario showing a binding constraint, boundary error >1e-6 (signals nc jumped within [1,256]), or perturbation failing to flip at the predicted threshold.",
+    "Low risk to approve: observe-only, deterministic, no oracle budget consumed and no code changes; main payoff is a defensible answer to 'are 4 groups enough?' plus a clean scoping of the queue-wait work for iter-3."
+  ]
+}

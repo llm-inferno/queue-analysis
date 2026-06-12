@@ -1,0 +1,12 @@
+{
+  "gate_type": "findings",
+  "summary": "All four arms in iteration 4 were CONFIRMED. The formula_guided strategy (h-main) locates the throughput plateau-onset batch size M* with a worst-case error (gap_M) of just 20 across six dev scenarios, roughly 6x better than both baselines, while staying within the 8-call budget and meeting the throughput-quality threshold.",
+  "key_points": [
+    "h-main (formula_guided) CONFIRMED: worst gap_M=20 (ttft-only: chosen M=72 vs M*=92), with most scenarios at gap_M<=9 (alpha-low=9, baseline=2, alpha-high=1, itl-only=0). This beats naive_max (worst 239) and naive_ternary (worst 127) by ~6x on the plateau-onset accuracy metric.",
+    "h-control-negative (naive_max) CONFIRMED exactly: it ties or beats everyone on throughput (worst gap_f=0.0027 in 1 call) but is maximally wrong on batch-size selection (worst gap_M=239). This proves throughput alone cannot distinguish strategy quality \u2014 gap_M is the meaningful axis.",
+    "h-ablation (naive_ternary) CONFIRMED: generic search hits the plateau but not its onset (worst gap_M=127, ttft-only chose M=219 vs M*=92), and costs 30 calls per scenario. This isolates that the formula guidance \u2014 not search itself \u2014 drives the improvement.",
+    "h-robustness CONFIRMED: the cell-aware HIGH seeding mechanism prevented collapse on ttft-only (would have stalled at M~56, gap_M~36 without it), instead achieving gap_M=20. This is the critical mechanism behind the headline result.",
+    "Engineering gates met: max calls=8 (exactly at the <=8 limit for the widest brackets), worst gap_f=0.0101 (below epsilon=0.02). The MAX_ITERS=6 cap plus bracket tightening is what keeps call counts in budget.",
+    "Both deviations from offline simulation predictions were favorable (actual worst gap_M=20 vs predicted ~22); no adverse surprises. experiment_valid=true."
+  ]
+}

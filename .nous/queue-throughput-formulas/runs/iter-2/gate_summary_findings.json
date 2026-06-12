@@ -1,0 +1,12 @@
+{
+  "gate_type": "findings",
+  "summary": "Iteration 2 confirmed all four hypotheses with zero directional errors: a 3-cell 'signed-bracket' classifier sorts all six development scenarios consistently with their regime labels, its two boundary equations are exact under nc=1, and the one label distinction it cannot make (itl-only vs crossover) is provably impossible from the available primitives.",
+  "key_points": [
+    "h-main CONFIRMED: All 6 scenarios classified correctly into 3 cells \u2014 unbounded (M-hat=256), ttft-only (M-hat=70), and itl-or-crossover (4 scenarios: baseline M-hat=40, itl-only M-hat=8, alpha-low M-hat=107, alpha-high M-hat=6). All three gate checks passed.",
+    "h-control-negative CONFIRMED: The fused itl-or-crossover cell is irreducible from primitives \u2014 itl-only and alpha-low (labeled 'crossover') share an identical primitive signature (1,0,1) yet carry different labels, proving 4 primitive groups are insufficient. Resolving this split requires a queue-wait term, deferred to iteration 3.",
+    "h-robustness CONFIRMED: Both boundary equations are closed-form and exact. ITL-boundary errors are at machine-epsilon level (max 2.84e-14, far below the 1e-6 threshold). The ttft-only 'iff' rule holds on all six, and lowering baseline targetTTFT below the predicted 28.114 cleanly flips it into ttft-only.",
+    "h-ablation CONFIRMED: Dropping the M_TPF < M_ITL ordering (naive 2x2 on binding booleans) causes 2 misclassifications (ttft-only mislabeled crossover, alpha-low mislabeled itl-only) versus 0 for the signed partition \u2014 confirming the ordering is the load-bearing component.",
+    "Experiment is valid with no surprises: no oracle calls, no truth-cache reads, no code changes; observe-iteration constraints fully satisfied.",
+    "Open item: the itl-only vs crossover distinction remains undecidable from current primitives and is the explicit target for the next iteration."
+  ]
+}

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "RP-1",
+    "statement": "When nc(B)=1 for all B in [1,256], itl(B) is exactly affine in B with slope delta=(w_prefill(1)+w_decode)/(1+m), and the ITL-binding M can be computed in closed form: M_ITL=clamp(floor(1+(targetITL-itl(1))/delta),1,256), matching a brute scan with zero discrepancy.",
+    "confidence": "high",
+    "regime": "Dev-set profiles where AvgInputTokens+AvgOutputTokens<<MaxNumTokens=8192, so nc stays at 1 throughout [1,256]. All six dev scenarios satisfy this condition.",
+    "evidence": ["iteration-1-h-main"],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "With nc=1, formulas.py:69-73 computes delta once (independent of B). bg(B)=alpha+(B-1)*delta (formulas.py:81-83) is exactly linear; itl(B)=bg(B)+beta+gamma*(n+(m+1)/2) is exactly affine (formulas.py:93-96). Inverting an affine integer inequality is exact, so floor-form == brute scan.",
+    "applicability_bounds": "Holds only when nc(B)=1 across the entire batch range. Breaks for high-input profiles where nc jumps (see RP-4). The dev set is entirely in the nc=1 regime; the benchmark grid is not.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-2",
+    "statement": "M_ITL is a lower bound on the oracle plateau-onset M*, not M* itself. Realized AvgITL averages over occupancy <=B, so AvgITL<=itl(B); the ITL SLO can be satisfied at batch sizes above M_ITL. The gap (M_truth/M_ITL ≈ 1.6–2.8 on ITL-binding scenarios) must be closed by an occupancy-gap correction derived from the queue solver.",
+    "confidence": "high",
+    "regime": "All constraint-binding scenarios (ITL-binding or crossover regime). The unbounded regime is exempt (M_ITL=M_truth=256 in that case).",
+    "evidence": ["iteration-1-h-main", "iteration-1-h-control-negative"],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "itl(B) is the full-batch iteration time (all B slots occupied). The M/M/1 queue solver's realized AvgITL is a weighted average over occupancy 1..B, which is strictly less than itl(B) whenever occupancy<B has positive probability. Therefore itl(M_ITL)=targetITL but AvgITL(M_ITL,RPS)<targetITL, meaning larger batches are still feasible.",
+    "applicability_bounds": "The bound direction (M_ITL <= M*) is universal under nc=1. The magnitude of the gap depends on the traffic regime (RPS relative to saturation). Iter-3 will quantify the gap via oracle validation.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-3",
+    "statement": "Saturation throughput S(B)=1000*B/tau(B) is monotonically increasing and concave in B under nc=1, approaching the analytic ceiling S_inf=1000/((1+m)*delta) from below (ratio 0.75–0.96 at B=256 on dev scenarios). Throughput is non-decreasing in M, so the useful upper bound on M comes from the binding latency constraint, not from saturation.",
+    "confidence": "high",
+    "regime": "nc=1 regime (dev set). Concavity implies diminishing returns but no interior maximum. May require piecewise analysis for nc>1 profiles where tau has slope changes.",
+    "evidence": ["iteration-1-h-robustness"],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "With nc=1, tau(B)=(1+m)*(alpha+B*delta) (formulas.py:76-79). S(B)=1000/(1+m) * B/(alpha+B*delta). The function x/(a+bx) is increasing and concave for a,b>0, with limit 1/b. Hence S_inf=1000/((1+m)*delta). No interior maximum exists, so increasing M never hurts throughput.",
+    "applicability_bounds": "Holds strictly under nc=1. For nc>1, tau has piecewise-linear slopes and S may have local non-monotone segments near nc jumps. Not validated on the benchmark grid.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-4",
+    "statement": "nc=1 is a NECESSARY condition for the ITL closed form to exactly match the brute scan. When nc(B) jumps within [1,256], delta changes at the jump and itl becomes piecewise-affine; a single-slope inversion from B=1 misestimates the crossing by up to one integer step.",
+    "confidence": "high",
+    "regime": "High-input profiles where n*nc > MaxNumTokens=8192 at some batch size within [1,256]. For the ablation profile (n=7500, m=64), nc jumps at B=6,39,51,57,62,65,67,70 and nc_max=174.",
+    "evidence": ["iteration-1-h-ablation"],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "formulas.py:69-73 recomputes nc(B) per call to delta(B). When nc increases at a batch-size jump, w_prefill(nc) grows and delta(B) increases above the nc-1 value. An affine inversion using delta(1) (nc=1 slope) underestimates the crossing batch size because the true itl curve bends upward at the jump, reaching targetITL sooner than the extrapolated single-slope line predicts.",
+    "applicability_bounds": "The mismatch is bounded (observed: 1 integer step for the ablation profile). For a piecewise-correct closed form, delta must be recomputed per nc-segment. The benchmark grid (nous/scenarios_benchmark.json) likely contains many nc>1 profiles and will need this piecewise treatment.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  },
+  {
+    "id": "RP-5",
+    "statement": "The prefill-only TTFT crossing M_TTFT_prefill=clamp(floor(1+(targetTTFT-ttft_prefill(1))/delta),1,256) is an UPPER bound on the true TTFT-binding M, because full TTFT=ttft_prefill(B)+queue_wait and the queue solver adds a positive wait term. Increasing M raises TTFT above the primitive-only estimate.",
+    "confidence": "medium",
+    "regime": "TTFT-binding and crossover scenarios. Observed M_TTFT_prefill values: ttft-only=70, alpha-high=45, baseline=147. Not directly gate-tested in iter-1 (the TTFT gates were not included in the validator); inferred from structural argument and per-scenario M_TTFT_prefill_closed_form values in baseline.json.",
+    "evidence": ["iteration-1-h-main"],
+    "contradicts": [],
+    "extraction_iteration": 1,
+    "mechanism": "ttft_prefill(B) is the batch-time component of TTFT (formulas.py:86-89). The M/M/1 solver adds queue_wait >= 0 to get the realized AvgTTFT. Hence AvgTTFT >= ttft_prefill(B), and the M where ttft_prefill(B)=targetTTFT is a batch size that already violates the full TTFT SLO when queue wait is non-trivial.",
+    "applicability_bounds": "The upper-bound direction is universal (queue_wait >= 0 always). Tightness depends on the traffic load: at low RPS the wait is negligible and M_TTFT_prefill is a tight upper bound; near saturation the wait is large and M_TTFT_prefill over-estimates M*_TTFT significantly. Quantifying the gap is iter-2/3 work.",
+    "superseded_by": null,
+    "category": "domain",
+    "status": "active"
+  }
+]

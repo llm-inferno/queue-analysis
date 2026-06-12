@@ -1,0 +1,11 @@
+{
+  "gate_type": "findings",
+  "summary": "All four hypothesis arms were CONFIRMED with the experiment exiting cleanly and all 8 validation gates returning true. The central finding holds: when the chunk count nc(B) stays at 1 across the batch-size range [1,256], inter-token latency (ITL) is exactly affine in batch size, and a closed-form formula for the maximum feasible batch size M_ITL matches the brute-force scan with zero discrepancy across all 6 development scenarios.",
+  "key_points": [
+    "h-main (CONFIRMED): nc(B)=1 everywhere in [1,256] for all 6 scenarios, making ITL exactly affine. The closed-form M_ITL exactly equals the brute-force scan in every case (baseline 40=40, itl-only 8=8, ttft-only 95=95, unbounded 256=256, alpha-low 107=107, alpha-high 6=6). ITL, prefill TTFT, and tau are all strictly increasing in B.",
+    "h-control-negative (CONFIRMED): For the unbounded scenario, ITL never reaches its target (ITL at B=256 is 15.94 vs target 200), so no interior crossing exists and M_ITL correctly clamps to the maximum (256). This shows the formula behaves correctly when the latency constraint is slack.",
+    "h-ablation (CONFIRMED): A high-input profile (n=7500) forces nc above 1 (peaks at 174, first jump at B=6), breaking the affine assumption. The closed form gives M_ITL=30 vs brute-force 31 \u2014 a mismatch of exactly 1 integer step. This establishes nc=1 as a necessary condition for the closed form's exactness.",
+    "h-robustness (CONFIRMED): Throughput S(B) is monotonically increasing and concave below the analytic ceiling for all scenarios, with saturation ratios at B=256 between 0.749 (unbounded, most headroom) and 0.963 (itl-only, closest to ceiling). No interior maximum exists, confirming that latency constraints \u2014 not throughput saturation \u2014 set the binding upper bound on batch size.",
+    "No surprises or diagnostic fallbacks: zero discrepancy on the core claim, and the single deterministic command exited 0. The ablation's off-by-one mismatch is well-understood (single slope-bend near the crossing) and bounds the failure mode precisely."
+  ]
+}
