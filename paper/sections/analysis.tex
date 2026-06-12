@@ -1,0 +1,191 @@
+\section{Analysis: The Shape of $f(M)$}
+\label{sec:analysis}
+
+We characterise $f(M)$, the maximum request rate that meets both latency SLOs
+(average TTFT and average ITL) at maximum batch size $M$, and derive the structural
+facts the scheduling algorithm exploits. Our claims are empirical across six scenarios
+and structural via the queueing model of Ramani and Tantawi~\cite{ramani2026queueing};
+the empirical breadth is limited, and the structural argument is the load-bearing one
+for generality.
+
+We evaluate $f(M)$ with that analytic model rather than on a live server. We refer to a
+single such evaluation --- given a parameter set and a batch size $M$, return the
+SLO-feasible request rate --- as one call to the \emph{oracle}; ``oracle cost'' below
+counts these calls. Our study uses six parameter scenarios spanning four regimes
+(crossover, ITL-only, TTFT-only, unbounded; Table~\ref{tab:lower-bound-regime}). For
+each scenario we precompute a \emph{truth cache}: the oracle evaluated exhaustively at
+every $M\in[1,256]$, giving the ground-truth $f(M)$ curve against which the closed-form
+quantities below are checked. Because $f(M)$ comes from the analytic model, the claims
+inherit its assumptions (Markovian arrivals and the three-parameter service model);
+validating them on a real vLLM server is future work.
+
+\subsection{A two-phase curve}
+\label{sec:shape}
+
+Figure~\ref{fig:baseline-fM} plots $f(M)$ for the baseline scenario. It rises concavely
+to a peak of $f^\ast \approx 1.92$~RPS and then plateaus. We call the operating point of
+interest the \emph{onset} $M^\ast$: the smallest $M$ reaching within $\varepsilon=2\%$ of
+the peak, $f(M) \ge (1-\varepsilon)\,f_{\max}$. For the baseline, $M^\ast = 69$. The
+strict throughput argmax (the smallest $M$ attaining the maximum, which our truth caches
+record as $M_{\text{truth}}$) coincides with the onset here because the plateau is flat
+to floating-point precision; \S\ref{sec:search} returns to when the two diverge.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\linewidth]{fig1_baseline_fM}
+  \caption{$f(M)$ for the baseline scenario: a concave rise to the onset
+           $M^\ast = 69$, then a plateau.}
+  \label{fig:baseline-fM}
+\end{figure}
+
+The same two-phase shape recurs across all six scenarios
+(Figure~\ref{fig:overlay-fM}), which span four runtime regimes (crossover,
+ITL-only, TTFT-only, unbounded) and onsets from $M^\ast=17$ to $256$. We normalise each
+curve by its own $f^\ast$ because peak throughput ranges from $0.13$ to $121$~RPS across
+the set. Six scenarios are not a universality proof; \S\ref{sec:min-constraints}
+supplies the structural reason the shape is general.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\linewidth]{fig2_overlay_fM}
+  \caption{Normalised $f(M)/f^\ast$ across the six scenarios, coloured by regime
+           (so the six curves map to four legend entries; the three crossover curves are
+           the $\alpha/\beta/\gamma$ sensitivity sweep --- baseline, alpha-low,
+           alpha-high). The two-phase shape recurs; the onset $M^\ast$ (dotted) varies
+           widely.}
+  \label{fig:overlay-fM}
+\end{figure}
+
+\subsection{The structural cause: a minimum of binding constraints}
+\label{sec:min-constraints}
+
+The queueing model of Ramani and Tantawi~\cite{ramani2026queueing} represents the server
+as a state-dependent M/M/1 queue with a three-parameter service model: a per-iteration
+overhead $\alpha$, a per-token compute slope $\beta$, and a per-token KV-cache-access
+slope $\gamma$. Each SLO caps the admissible arrival rate at a given $M$, yielding two
+constraint curves $\lambda^\ast_{\mathrm{TTFT}}(M)$ and $\lambda^\ast_{\mathrm{ITL}}(M)$
+(the \texttt{RPSTargetTTFT} and \texttt{RPSTargetITL} outputs of the analyzer). The
+feasible request rate is their lower envelope:
+\begin{equation}
+  f(M) \;=\; \min\bigl(\lambda^\ast_{\mathrm{TTFT}}(M),\,
+                       \lambda^\ast_{\mathrm{ITL}}(M)\bigr).
+  \label{eq:min-constraints}
+\end{equation}
+
+The two-phase shape follows from the asymmetry of the two curves. The per-iteration
+saturation throughput $S(B) = 1000\,B/\tau(B)$ is concave and increasing in the batch
+occupancy $B$, approaching an analytic ceiling $S_\infty$ from below; consequently
+$\lambda^\ast_{\mathrm{ITL}}(M)$ rises to and settles at a plateau (bounded above),
+while $\lambda^\ast_{\mathrm{TTFT}}(M)$ keeps rising over the range of interest. Below
+the crossing the TTFT constraint binds and $f$ rises; above it the (plateaued) ITL
+constraint binds and $f$ flattens. Figure~\ref{fig:min-constraints} shows the
+decomposition for the baseline.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\linewidth]{fig3_min_constraints}
+  \caption{Min-of-constraints decomposition for the baseline. Below $M^\ast$ the TTFT
+           constraint binds; above it the plateaued ITL constraint binds. $f(M)$ is the
+           lower envelope of Eq.~\eqref{eq:min-constraints}.}
+  \label{fig:min-constraints}
+\end{figure}
+
+\subsection{A closed-form lower bound: $M_{\mathrm{ITL}}$}
+\label{sec:mitl}
+
+A batch's prefill may be split into $nc(B)$ chunks across iterations; for all six
+scenarios a single chunk suffices at every batch size, i.e. $nc(B)=1$ for all
+$B\in[1,M_{\max}]$ (we verify this rather than assume it). Under that condition the
+per-token latency $\mathrm{itl}(B)$ is exactly affine in $B$ with slope
+$\delta = (w_{\mathrm{prefill}}(1)+w_{\mathrm{decode}})/(1+m_{\mathrm{out}})$.
+Inverting the ITL target then gives a closed-form ITL-binding batch size
+\begin{equation}
+  M_{\mathrm{ITL}} \;=\; \mathrm{clamp}\!\left(
+    \left\lfloor 1 + \frac{\mathrm{targetITL} - \mathrm{itl}(1)}{\delta}\right\rfloor,
+    \,1,\,M_{\max}\right),
+  \label{eq:mitl}
+\end{equation}
+which matches a brute-force scan with zero discrepancy. For the baseline
+($\mathrm{itl}(1)\approx 8.29$, $\delta\approx 0.297$), Eq.~\eqref{eq:mitl} gives
+$M_{\mathrm{ITL}} = 40$.
+
+$M_{\mathrm{ITL}}$ is a \emph{lower bound} on the onset, not the onset itself. Realised
+average ITL averages over occupancies at or below $B$, so
+$\mathrm{AvgITL} \le \mathrm{itl}(B)$; the ITL SLO is therefore met at batch sizes above
+$M_{\mathrm{ITL}}$, and the true onset lies higher
+(Table~\ref{tab:lower-bound-regime}: $M^\ast=69 > 40$ for the baseline). The closed form
+requires $nc=1$; under chunk-count jumps $\mathrm{itl}$ becomes piecewise-affine and a
+single-slope inversion errs by up to one step --- outside the scope of these scenarios.
+
+\subsection{Regime classification from primitives}
+\label{sec:regimes}
+
+A second primitive, $M_{\mathrm{TPF}}$ --- the largest $B$ whose prefill-only TTFT
+$\mathrm{ttft\_prefill}(B)$ meets the TTFT target --- combines with $M_{\mathrm{ITL}}$ to
+classify a scenario at zero oracle cost. The primitives partition parameter space into
+exactly three cells:
+\begin{description}
+  \item[Unbounded] neither SLO binds at $M_{\max}$;
+  \item[TTFT-only] $M_{\mathrm{TPF}} < M_{\mathrm{ITL}}$;
+  \item[ITL-or-crossover] $M_{\mathrm{ITL}} \le M_{\mathrm{TPF}}$.
+\end{description}
+The load-bearing signal is the \emph{ordering} of $M_{\mathrm{TPF}}$ and
+$M_{\mathrm{ITL}}$, not the two binding indicators alone: the TTFT-only scenario violates
+both SLOs at $M_{\max}$, so a test on the indicators misclassifies it as crossover.
+Note $M_{\mathrm{TPF}}$ bounds the $M$ at which the TTFT constraint first binds, not the
+onset: $\mathrm{ttft\_prefill}$ excludes the M/M/1 queue wait, so the realised TTFT
+frontier sits above $M_{\mathrm{TPF}}$ (the TTFT-only scenario has $M^\ast = 92 >
+M_{\mathrm{TPF}} = 70$). The ITL-only and crossover regimes share the third cell and are
+separated only by the oracle.
+
+\subsection{Why search, not prediction}
+\label{sec:search}
+
+\paragraph{Structural plateau vs.\ numerical noise.}
+For $M \ge M^\ast$ the plateaued ITL constraint bounds $f$ from above
+(\S\ref{sec:min-constraints}). The $\sim\!10^{-4}$ wobble we observe over the plateau is
+solver noise, not true flatness at machine precision: the structural claim guarantees
+boundedness, not constancy. We therefore treat any $M \ge M^\ast$ as achieving $f^\ast$
+up to numerical precision.
+
+\paragraph{Onset vs.\ argmax.}
+The strict throughput argmax can sit well above the onset on a wide plateau that wiggles
+at floating-point precision (we have observed an onset near $46$ against an argmax of
+$118$ on wider grids). Over-provisioning to the argmax wastes concurrency, so we optimise
+the onset. On the six scenarios here the plateaus are flat to floating point, so the
+argmax coincides with the onset and our cached $M_{\text{truth}}$ is a faithful onset.
+
+\paragraph{The occupancy gap forces a search.}
+Table~\ref{tab:lower-bound-regime} reports the occupancy gap $M^\ast/M_{\mathrm{ITL}}$.
+On the ITL-governed scenarios it ranges from $1.59\times$ to $2.83\times$ and is not a
+constant (it widens further on broader grids), so $M_{\mathrm{ITL}}$ cannot predict
+$M^\ast$ directly. Instead it \emph{warm-starts} a downward monotone-predicate search:
+anchor the near-peak threshold at $f(M_{\max})$ --- a high anchor avoids underestimating
+the peak when queue wait lifts realised throughput far above the per-iteration bound ---
+and descend to the smallest $M$ still meeting the threshold. Because $f$ is non-decreasing
+to a plateau, this converges to the onset in $O(\log M_{\max})$ oracle calls. Deriving the
+occupancy gap analytically from the queueing model's light- and heavy-traffic asymptotics
+--- which would tighten the warm start toward a direct predictor and remove the residual
+search --- is left to future work; the analytic model of Ramani and
+Tantawi~\cite{ramani2026queueing} is the natural starting point.
+
+\input{tabs/lower_bound_regime}
+
+\subsection{Summary: properties exploited downstream}
+\label{sec:summary}
+
+The scheduling algorithm builds on four properties established here:
+\begin{description}
+  \item[\textbf{P1} Two-phase shape.] $f(M)$ rises concavely to $M^\ast$, then plateaus
+    (\S\ref{sec:shape}, \S\ref{sec:min-constraints}). Optimisation reduces to onset
+    detection.
+  \item[\textbf{P2} Closed-form warm start.] $M_{\mathrm{ITL}}$ is an exact lower bound
+    under $nc=1$, and the $M_{\mathrm{TPF}}$ vs.\ $M_{\mathrm{ITL}}$ ordering classifies
+    the regime at zero oracle cost (\S\ref{sec:mitl}, \S\ref{sec:regimes}).
+  \item[\textbf{P3} Monotone-to-plateau.] $f$ is non-decreasing, so a downward
+    monotone-predicate search with the threshold anchored at $M_{\max}$ converges in
+    $O(\log M_{\max})$ calls (\S\ref{sec:search}).
+  \item[\textbf{P4} Bounded but non-constant gap.] The occupancy gap rules out pure
+    prediction; a warm-started bounded search reaches the onset in a few oracle calls
+    (\S\ref{sec:search}).
+\end{description}

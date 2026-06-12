@@ -26,3 +26,6 @@ __pycache__/
 nous/cache/
 nous/results/
 nous/.venv/
+
+# Local reference papers (external/copyrighted PDFs)
+docs/references/

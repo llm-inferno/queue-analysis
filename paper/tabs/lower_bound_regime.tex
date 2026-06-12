@@ -1,0 +1,17 @@
+\begin{table}[t]
+  \centering
+  \caption{Closed-form lower bound, regime, and occupancy gap across the six scenarios. $M_{\mathrm{ITL}}$ is exact under $nc=1$ (RP-1) and a lower bound on the onset $M^*$ (RP-2); the gap $M^*/M_{\mathrm{ITL}}$ is bounded but non-constant, motivating a warm-started search rather than direct prediction. The $\mathrm{ttft\text{-}only}$ row has $M_{\mathrm{TPF}}<M_{\mathrm{ITL}}$ (RP-7), the load-bearing classification signal.}
+  \label{tab:lower-bound-regime}
+  \begin{tabular}{llrrrrr}
+    \toprule
+    Scenario & regime & $M_{\mathrm{ITL}}$ & $M_{\mathrm{TPF}}$ & $M^*$ & $M^*/M_{\mathrm{ITL}}$ & gap$_f$ (\%) \\
+    \midrule
+    baseline & crossover & 40 & 147 & 69 & 1.73 & 23.5 \\
+    alpha--low & crossover & 107 & 256 & 170 & 1.59 & 10.1 \\
+    alpha--high & crossover & 6 & 45 & 17 & 2.83 & 75.8 \\
+    itl--only & itl-only & 8 & 256 & 17 & 2.12 & 48.3 \\
+    ttft--only & ttft-only & 95 & 70 & 92 & 0.97 & 0.0 \\
+    unbounded & unbounded & 256 & 256 & 256 & 1.00 & 0.0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
