@@ -106,7 +106,31 @@ def fig2_overlay_fM():
     ax.legend(loc="lower right", framealpha=0.9, title="regime")
     fig.savefig(FIG_DIR / "fig2_overlay_fM.pdf")
     plt.close(fig)
-def fig3_min_constraints(): pass
+def fig3_min_constraints():
+    sweep = load_baseline_sweep()
+    rows = [r for r in sweep["rows"] if not r["infeasible"]]
+    ms = np.array([r["m"] for r in rows])
+    lam_ttft = np.array([r["RPSTargetTTFT"] for r in rows])
+    lam_itl = np.array([r["RPSTargetITL"] for r in rows])
+    f_min = np.minimum(lam_ttft, lam_itl)
+    m_star = load_truth("baseline")["M_truth"]
+
+    fig, ax = plt.subplots(figsize=(5.8, 3.6))
+    ax.plot(ms, lam_ttft, color="C1", label=r"$\lambda^*_{\mathrm{TTFT}}(M)$")
+    ax.plot(ms, lam_itl, color="C2", label=r"$\lambda^*_{\mathrm{ITL}}(M)$")
+    ax.plot(ms, f_min, color="C0", linewidth=2.6, label=r"$f(M)=\min(\cdot)$")
+    ax.axvspan(ms.min(), m_star, alpha=0.07, color="C1")
+    ax.axvspan(m_star, ms.max(), alpha=0.07, color="C2")
+    ax.axvline(m_star, color="gray", linestyle="--", linewidth=1)
+    ax.text(m_star * 0.5, f_min.max() * 0.15, "TTFT binds", ha="center", color="C1", fontsize=9)
+    ax.text((m_star + ms.max()) / 2, f_min.max() * 0.15, "ITL binds", ha="center", color="C2", fontsize=9)
+    ax.set_xlabel("MaxBatchSize $M$")
+    ax.set_ylabel("RPS")
+    ax.set_xlim(ms.min(), ms.max())
+    ax.set_ylim(bottom=0)
+    ax.legend(loc="lower right", framealpha=0.9)
+    fig.savefig(FIG_DIR / "fig3_min_constraints.pdf")
+    plt.close(fig)
 def fig4_lower_bound_bracket(): pass
 def tab1_lower_bound_regime(): pass
 
