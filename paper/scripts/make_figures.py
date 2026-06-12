@@ -131,7 +131,36 @@ def fig3_min_constraints():
     ax.legend(loc="lower right", framealpha=0.9)
     fig.savefig(FIG_DIR / "fig3_min_constraints.pdf")
     plt.close(fig)
-def fig4_lower_bound_bracket(): pass
+def fig4_lower_bound_bracket():
+    truth = load_truth("baseline")
+    p = SCN_PARAMS["baseline"]
+    m_star = truth["M_truth"]
+    f_star = truth["throughput_truth"]
+    ms = [pt["m"] for pt in truth["f_curve"]]
+    fs = [pt["throughput"] for pt in truth["f_curve"]]
+    m_itl = P.m_itl(p, M_MAX)
+    m_tpf = P.m_tpf(p, M_MAX)
+
+    fig, ax = plt.subplots(figsize=(5.8, 3.4))
+    ax.plot(ms, fs, color="C0", zorder=2)
+    marks = [
+        (m_itl, "C2", f"$M_{{\\mathrm{{ITL}}}}={m_itl}$", "lower bound"),
+        (m_star, "gray", f"$M^*={m_star}$", "onset"),
+        (m_tpf, "C1", f"$M_{{\\mathrm{{TPF}}}}={m_tpf}$", "TTFT upper bd"),
+    ]
+    for x, c, lab, _ in marks:
+        ax.axvline(x, color=c, linestyle="--", linewidth=1.2, zorder=1)
+    # Shade the [M_ITL, M_TPF] bracket the search narrows.
+    ax.axvspan(m_itl, m_tpf, alpha=0.08, color="C0", zorder=0)
+    handles = [plt.Line2D([0], [0], color=c, linestyle="--", label=lab)
+               for x, c, lab, _ in marks]
+    ax.legend(handles=handles, loc="lower right", framealpha=0.9)
+    ax.set_xlabel("MaxBatchSize $M$")
+    ax.set_ylabel("$f(M)$ [RPS]")
+    ax.set_xlim(0, M_MAX)
+    ax.set_ylim(0, f_star * 1.15)
+    fig.savefig(FIG_DIR / "fig4_lower_bound_bracket.pdf")
+    plt.close(fig)
 def tab1_lower_bound_regime(): pass
 
 
