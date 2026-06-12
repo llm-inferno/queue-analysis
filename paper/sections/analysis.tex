@@ -150,7 +150,11 @@ $M^\ast$ directly. Instead it \emph{warm-starts} a downward monotone-predicate s
 anchor the near-peak threshold at $f(M_{\max})$ --- a high anchor avoids underestimating
 the peak when queue wait lifts realised throughput far above the per-iteration bound ---
 and descend to the smallest $M$ still meeting the threshold. Because $f$ is non-decreasing
-to a plateau, this converges to the onset in $O(\log M_{\max})$ oracle calls.
+to a plateau, this converges to the onset in $O(\log M_{\max})$ oracle calls. Deriving the
+occupancy gap analytically from the queueing model's light- and heavy-traffic asymptotics
+--- which would tighten the warm start toward a direct predictor and remove the residual
+search --- is left to future work; the analytic model of Ramani and
+Tantawi~\cite{ramani2026queueing} is the natural starting point.
 
 \input{tabs/lower_bound_regime}
 
