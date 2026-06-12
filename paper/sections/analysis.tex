@@ -150,3 +150,22 @@ and descend to the smallest $M$ still meeting the threshold. Because $f$ is non-
 to a plateau, this converges to the onset in $O(\log M_{\max})$ oracle calls.
 
 \input{tabs/lower_bound_regime}
+
+\subsection{Summary: properties exploited downstream}
+\label{sec:summary}
+
+The scheduling algorithm builds on four properties established here:
+\begin{description}
+  \item[\textbf{P1} Two-phase shape.] $f(M)$ rises concavely to $M^\ast$, then plateaus
+    (\S\ref{sec:shape}, \S\ref{sec:min-constraints}). Optimisation reduces to onset
+    detection.
+  \item[\textbf{P2} Closed-form warm start.] $M_{\mathrm{ITL}}$ is an exact lower bound
+    under $nc=1$, and the $M_{\mathrm{TPF}}$ vs.\ $M_{\mathrm{ITL}}$ ordering classifies
+    the regime at zero oracle cost (\S\ref{sec:mitl}, \S\ref{sec:regimes}).
+  \item[\textbf{P3} Monotone-to-plateau.] $f$ is non-decreasing, so a downward
+    monotone-predicate search with the threshold anchored at $M_{\max}$ converges in
+    $O(\log M_{\max})$ calls (\S\ref{sec:search}).
+  \item[\textbf{P4} Bounded but non-constant gap.] The occupancy gap rules out pure
+    prediction; a warm-started bounded search reaches the onset in a few oracle calls
+    (\S\ref{sec:search}).
+\end{description}
