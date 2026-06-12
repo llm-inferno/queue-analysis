@@ -7,3 +7,37 @@ facts the scheduling algorithm exploits. Our claims are empirical across six sce
 and structural via the queueing model of Ramani and Tantawi~\cite{ramani2026queueing};
 the empirical breadth is limited, and the structural argument is the load-bearing one
 for generality.
+
+\subsection{A two-phase curve}
+\label{sec:shape}
+
+Figure~\ref{fig:baseline-fM} plots $f(M)$ for the baseline scenario. It rises concavely
+to a peak of $f^\ast \approx 1.92$~RPS and then plateaus. We call the operating point of
+interest the \emph{onset} $M^\ast$: the smallest $M$ reaching within $\varepsilon=2\%$ of
+the peak, $f(M) \ge (1-\varepsilon)\,f_{\max}$. For the baseline, $M^\ast = 69$. The
+strict throughput argmax (the smallest $M$ attaining the maximum, which our truth caches
+record as $M_{\text{truth}}$) coincides with the onset here because the plateau is flat
+to floating-point precision; \S\ref{sec:search} returns to when the two diverge.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\linewidth]{fig1_baseline_fM}
+  \caption{$f(M)$ for the baseline scenario: a concave rise to the onset
+           $M^\ast = 69$, then a plateau.}
+  \label{fig:baseline-fM}
+\end{figure}
+
+The same two-phase shape recurs across all six scenarios
+(Figure~\ref{fig:overlay-fM}), which span four runtime regimes (crossover,
+ITL-only, TTFT-only, unbounded) and onsets from $M^\ast=17$ to $256$. We normalise each
+curve by its own $f^\ast$ because peak throughput ranges from $0.13$ to $121$~RPS across
+the set. Six scenarios are not a universality proof; \S\ref{sec:min-constraints}
+supplies the structural reason the shape is general.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\linewidth]{fig2_overlay_fM}
+  \caption{Normalised $f(M)/f^\ast$ across the six scenarios, coloured by regime. The
+           two-phase shape recurs; the onset $M^\ast$ (dotted) varies widely.}
+  \label{fig:overlay-fM}
+\end{figure}
