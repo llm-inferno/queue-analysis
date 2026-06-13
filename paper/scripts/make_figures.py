@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import primitives as P
+import eval_strategies as EV
 
 REPO = Path(__file__).resolve().parents[2]
 TRUTH_DIR = REPO / "nous" / "cache"
@@ -25,9 +26,6 @@ DATA_DIR = REPO / "paper" / "data"
 FIG_DIR = REPO / "paper" / "figs"
 TAB_DIR = REPO / "paper" / "tabs"
 M_MAX = 256
-# Search constants, mirroring nous/harness/strategies/formula_guided.py.
-EPS = 0.02
-MAX_ITERS = 6
 
 # Display order, grouped by regime; baseline first (headline).
 SCENARIOS = ["baseline", "alpha-low", "alpha-high", "itl-only", "ttft-only", "unbounded"]
@@ -62,6 +60,7 @@ def main() -> None:
     fig4_lower_bound_bracket()
     fig5_onset_search()
     tab1_lower_bound_regime()
+    tab2_eval_comparison()
     print("done")
 
 
@@ -176,29 +175,15 @@ def fig4_lower_bound_bracket():
     fig.savefig(FIG_DIR / "fig4_lower_bound_bracket.pdf")
     plt.close(fig)
 def fig5_onset_search():
-    """Method schematic: closed-form markers + anchor + downward search to M*.
-    Illustrative (baseline data); the measured evaluation lives in Experiments."""
+    """Measured search trace: the actual probes formula_guided issues on the
+    baseline scenario (replayed via eval_strategies.trace), over the true f(M)."""
     fig, ax, c = _baseline_fM_axes()
-    # Bracket exactly as formula_guided.py (v3) computes it.
-    seed = M_MAX
-    f_anchor = c.f_of[seed]
-    threshold = (1.0 - EPS / 2.0) * f_anchor
+    tr = EV.trace("formula_guided", "baseline")
+    seed, probes = tr["seed"], tr["probes"]
+    f_anchor, threshold = tr["f_anchor"], tr["threshold"]
     lo = max(1, min(c.m_itl, c.m_tpf))
     U = max(c.m_itl, c.m_tpf)
     hi = min(seed, max(3 * U, lo + 1), M_MAX)
-    hi = max(lo, hi)
-
-    # Replay the downward binary search to mark the probed midpoints.
-    lo_i, hi_i, probes = lo, hi, []
-    for _ in range(MAX_ITERS):
-        if lo_i >= hi_i:
-            break
-        mid = (lo_i + hi_i) // 2
-        probes.append(mid)
-        if c.f_of[mid] >= threshold:
-            hi_i = mid
-        else:
-            lo_i = mid + 1
 
     # Search bracket the algorithm narrows.
     ax.axvspan(lo, hi, alpha=0.08, color="C0", zorder=0)
@@ -269,6 +254,44 @@ def tab1_lower_bound_regime():
             f"{r['m_tpf']} & {r['m_star']} & {r['gap']:.2f} & {r['gap_f']*100:.1f} \\\\")
     lines += [r"    \bottomrule", r"  \end{tabular}", r"\end{table}", ""]
     (TAB_DIR / "lower_bound_regime.tex").write_text("\n".join(lines))
+
+
+def tab2_eval_comparison():
+    """Strategy comparison over the 25 feasible benchmark scenarios.
+    Reads paper/data/eval_results.json (run eval_strategies.py first)."""
+    res = json.loads((DATA_DIR / "eval_results.json").read_text())
+    agg = res["aggregates"]["benchmark"]
+    eps = res["eps"]
+    display = [("formula_guided", "Formula-guided"),
+               ("naive_ternary", "Parameter-blind ternary"),
+               ("naive_max", "Naive-max")]
+    n = agg["n_scenarios"]
+    lines = [
+        r"\begin{table}[t]",
+        r"  \centering",
+        r"  \caption{Onset-search accuracy and cost over the " + str(n) +
+        r" feasible benchmark scenarios (worst / mean). $\mathrm{gap}_{\mathrm{onset}}"
+        r"=|\hat M - M^\ast|$ is measured against the $\varepsilon$-onset (the objective);"
+        r" $\mathrm{gap}_{\mathrm{argmax}}$ against the strict throughput argmax (campaign"
+        r" convention; its floor is structural, RP-10). $\mathrm{gap}_f$ is the relative"
+        r" throughput shortfall; the SLO tolerance is $\varepsilon=" + f"{eps:.2f}" + r"$."
+        r" Only Formula-guided is simultaneously cheap, SLO-feasible, and near-onset.}",
+        r"  \label{tab:eval-comparison}",
+        r"  \begin{tabular}{lrrrr}",
+        r"    \toprule",
+        r"    Strategy & calls & $\mathrm{gap}_{\mathrm{onset}}$ (worst/mean) & "
+        r"$\mathrm{gap}_f$ (worst) & $\mathrm{gap}_{\mathrm{argmax}}$ (worst) \\",
+        r"    \midrule",
+    ]
+    for key, label in display:
+        a = agg[key]
+        ok = r"\checkmark" if a["gap_f_worst"] <= eps else r"$\times$"
+        lines.append(
+            f"    {label} & {a['calls_worst']} & "
+            f"{a['gap_onset_worst']}/{a['gap_onset_mean']:.1f} & "
+            f"{a['gap_f_worst']:.4f}~{ok} & {a['gap_argmax_worst']} \\\\")
+    lines += [r"    \bottomrule", r"  \end{tabular}", r"\end{table}", ""]
+    (TAB_DIR / "eval_comparison.tex").write_text("\n".join(lines))
 
 
 if __name__ == "__main__":

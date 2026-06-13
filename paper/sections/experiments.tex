@@ -1,0 +1,75 @@
+\section{Experiments}
+\label{sec:experiments}
+
+We validate the formula-guided onset search of \S\ref{sec:algorithm} and demonstrate it on a
+worked scenario. These are \emph{numerical} experiments: they evaluate the algorithm against
+the analytic queueing model of Ramani and Tantawi~\cite{ramani2026queueing} --- the same oracle
+used throughout the paper --- not a live server. Their role is exploration and validation. The
+substantive comparative study --- the end-to-end benefit of capping \emph{concurrency} (serving
+at the onset $M^\ast$) against other admission or rate-limiting schemes on a real deployment ---
+is future work (\S\ref{sec:exp-threats}).
+
+\subsection{Setup}
+\label{sec:exp-setup}
+One \emph{oracle} call is one analytic SLO-feasible-rate evaluation $f(M)$ (\S\ref{sec:analysis}).
+We evaluate on the six development scenarios spanning the four regimes and on a $30$-scenario
+benchmark drawn by Latin-hypercube sampling (seed $42$) over the service- and workload-parameter
+ranges; $25$ are feasible and $5$ are infeasible at every $M$ (all-zero $f$ curves), on which a
+correct strategy returns $m_{\min}$. For every scenario we precompute a \emph{truth cache}: the
+oracle evaluated at all $M\in[1,256]$, giving the ground-truth curve, the strict argmax
+$M_{\mathrm{truth}}$, and the peak. The $\varepsilon$-onset $M^\ast$ is the smallest $M$ with
+$f(M)\ge(1-\varepsilon)\max_M f(M)$, $\varepsilon=0.02$.\footnote{The Analysis and Algorithm
+sections tabulate $M^\ast$ as $M_{\mathrm{truth}}$ (the strict argmax) where the two coincide to
+floating point; the genuine $\varepsilon$-onset can sit a few steps below (baseline: $66$ vs
+$69$) and far below on float-wiggly benchmark plateaus --- precisely why we report both gaps.}
+Because the cache is the oracle tabulated at every $M$ and the strategies are deterministic, we
+\emph{replay} the three committed strategies offline against the caches with a counted,
+cache-backed oracle (no server); call counts and chosen $M$ reproduce a live run exactly. As in
+the harness, one confirmatory $f(\hat M)$ call follows each strategy, so reported call counts
+include that $+1$.
+
+\subsection{Onset accuracy and cost}
+\label{sec:exp-accuracy}
+Table~\ref{tab:eval-comparison} compares the formula-guided search against the two baselines of
+\S\ref{sec:algo-baselines} on the feasible benchmark. We report $\mathrm{gap}_{\mathrm{onset}}
+=|\hat M - M^\ast|$ against the $\varepsilon$-onset --- the quantity the algorithm optimises ---
+and, for continuity with the discovery campaign, $\mathrm{gap}_{\mathrm{argmax}}=|\hat M -
+M_{\mathrm{truth}}|$ against the strict argmax. Formula-guided is the only strategy that is at
+once \emph{cheap} ($\le 8$ oracle calls), \emph{SLO-feasible} (worst $\mathrm{gap}_f=0.0138<
+\varepsilon$), and \emph{near-onset} (worst $\mathrm{gap}_{\mathrm{onset}}=38$, mean $7.6$). The
+naive-max heuristic spends a single call but over-provisions massively (mean
+$\mathrm{gap}_{\mathrm{onset}}=180$) and even violates the latency tolerance on an interior-peak
+scenario ($\mathrm{gap}_f=0.0286$); parameter-blind ternary spends $30$ calls to converge to the
+plateau interior, also violating the tolerance and landing far from the onset. Since both
+baselines breach $\mathrm{gap}_f\le\varepsilon$, formula-guided is the only SLO-feasible
+operating point of the three, and it reaches it at near-onset concurrency in a handful of
+calls. The six development scenarios corroborate (worst
+$\mathrm{gap}_f=0.0101$, $\le 8$ calls).
+
+\input{tabs/eval_comparison}
+
+The residual $\mathrm{gap}_{\mathrm{argmax}}$ (worst $72$) is dominated by the structural
+argmax-vs-onset divergence (\S\ref{sec:search}, RP-10): on float-wiggly plateaus the strict
+argmax sits far above the onset (one scenario: argmax $118$ vs onset $44$), so most of that gap
+is not search error but the deliberate choice to stop at the onset rather than over-provision to
+the argmax.
+
+\subsection{A measured search trace}
+\label{sec:exp-trace}
+Figure~\ref{fig:onset-search} shows the procedure as actually executed on the baseline scenario:
+$f^\ast$ anchored at $m_{\max}=256$, the threshold at $(1-\varepsilon/2)f^\ast$, and the
+downward monotone-predicate probes $\{148,94,67,53,60,64\}$ descending from the bracket
+$[40,256]$ to $\hat M=67$, one step above the onset $M^\ast=66$ --- eight oracle calls including
+the anchor and the confirmatory evaluation.
+
+\subsection{Scope and threats to validity}
+\label{sec:exp-threats}
+The oracle is the analytic model, not a live server: results inherit its Markovian-arrival and
+three-parameter service assumptions, and a real vLLM deployment adds stochastic token lengths,
+KV-cache eviction, and chunked prefill that can break the $nc=1$ regime or the M/M/1 wait model.
+Calibrating the primitives $\mathrm{itl}(B)$, $\mathrm{ttft\_prefill}(B)$ against measured vLLM
+is the headline next step. The exact closed-form $M_{\mathrm{ITL}}$ holds under $nc=1$ (all dev
+scenarios; most of the benchmark); under chunk-count jumps the warm start can err by a step
+(\S\ref{sec:mitl}). Finally, the evaluation establishes that the algorithm \emph{finds} the
+near-minimal SLO-feasible concurrency; quantifying the operational \emph{benefit} of serving
+there, versus alternative limiting schemes, is the comparative study left to future work.
