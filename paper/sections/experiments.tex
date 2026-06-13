@@ -40,9 +40,10 @@ once \emph{cheap} ($\le 8$ oracle calls), \emph{SLO-feasible} (worst $\mathrm{ga
 naive-max heuristic spends a single call but over-provisions massively (mean
 $\mathrm{gap}_{\mathrm{onset}}=180$) and even violates the latency tolerance on an interior-peak
 scenario ($\mathrm{gap}_f=0.0286$); parameter-blind ternary spends $30$ calls to converge to the
-plateau interior, also violating the tolerance and landing far from the onset. Formula-guided
-thus Pareto-dominates both on $(\text{calls},\,\mathrm{gap}_{\mathrm{onset}})$ subject to
-$\mathrm{gap}_f\le\varepsilon$. The six development scenarios corroborate (worst
+plateau interior, also violating the tolerance and landing far from the onset. Since both
+baselines breach $\mathrm{gap}_f\le\varepsilon$, formula-guided is the only SLO-feasible
+operating point of the three, and it reaches it at near-onset concurrency in a handful of
+calls. The six development scenarios corroborate (worst
 $\mathrm{gap}_f=0.0101$, $\le 8$ calls).
 
 \input{tabs/eval_comparison}
