@@ -155,9 +155,11 @@ Reuses `ProblemData` as the request body (`maxBatchSize` is interpreted as
 type OptimizeData struct {
     Concurrency  int     `json:"concurrency"`  // M*
     Throughput   float32 `json:"throughput"`
+    AvgRespTime  float32 `json:"avgRespTime"`  // average response time at M*
+    AvgWaitTime  float32 `json:"avgWaitTime"`  // average queueing time at M*
+    AvgNumInServ float32 `json:"avgNumInServ"`
     AvgTTFT      float32 `json:"avgTTFT"`
     AvgITL       float32 `json:"avgITL"`
-    AvgNumInServ float32 `json:"avgNumInServ"`
     MaxRPS       float32 `json:"maxRPS"`
     MITL         int     `json:"M_ITL"`
     MTPF         int     `json:"M_TPF"`
@@ -165,6 +167,12 @@ type OptimizeData struct {
     Feasible     bool    `json:"feasible"`
 }
 ```
+
+The metric fields (`Throughput` … `MaxRPS`) mirror `AnalysisData`'s order and
+JSON names so `/solve`, `/target`, and `/optimize` report a consistent
+operating-point block; `/optimize` then adds the concurrency-specific fields
+(`concurrency`, `M_ITL`, `M_TPF`, `oracleCalls`, `feasible`). All metric fields
+are populated from the confirmatory `Metrics` at `M*` when feasible, else zero.
 
 Registered alongside `/solve` and `/target` in `NewAnalyzer()`.
 
