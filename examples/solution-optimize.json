@@ -1,0 +1,14 @@
+{
+    "concurrency": 48,
+    "throughput": 2.9494622,
+    "avgRespTime": 10231.625,
+    "avgWaitTime": 14.219727,
+    "avgNumInServ": 30.135853,
+    "avgTTFT": 60.000584,
+    "avgITL": 19.90533,
+    "maxRPS": 3.8609295,
+    "M_ITL": 31,
+    "M_TPF": 48,
+    "oracleCalls": 6,
+    "feasible": true
+}

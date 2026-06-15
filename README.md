@@ -41,9 +41,27 @@ type AnalysisData struct {
 }
 ```
 
+``` go
+// optimal-concurrency output data (POST /optimize)
+type OptimizeData struct {
+ Concurrency  int     `json:"concurrency"`  // minimum concurrency (max batch size) for near-peak throughput under SLO
+ Throughput   float32 `json:"throughput"`   // throughput at the chosen concurrency (requests/sec)
+ AvgRespTime  float32 `json:"avgRespTime"`  // average response time (msec)
+ AvgWaitTime  float32 `json:"avgWaitTime"`  // average queueing time (msec)
+ AvgNumInServ float32 `json:"avgNumInServ"` // average number of requests in service
+ AvgTTFT      float32 `json:"avgTTFT"`      // average time to first token (msec)
+ AvgITL       float32 `json:"avgITL"`       // average inter-token latency (msec)
+ MaxRPS       float32 `json:"maxRPS"`       // maximum throughput (requests/sec)
+ MITL         int     `json:"M_ITL"`        // closed-form ITL-binding batch size
+ MTPF         int     `json:"M_TPF"`        // closed-form TTFT-prefill-binding batch size
+ Calls        int     `json:"oracleCalls"`  // number of model evaluations used by the search
+ Feasible     bool    `json:"feasible"`     // whether the SLO is achievable within [1, maxBatchSize]
+}
+```
+
 ## Endpoints
 
-There are two operations:
+There are three operations:
 
 1. **\solve**
 
@@ -111,6 +129,45 @@ There are two operations:
     }
     ```
 
+3. **\optimize**
+
+    Find the minimum request concurrency (max batch size) that achieves near-maximum request throughput while still meeting the target performance values for TTFT and ITL. Here `maxBatchSize` is interpreted as the search upper bound (the largest concurrency to consider); the returned `concurrency` is the smallest batch-size limit that reaches near-peak throughput under the SLO. Operating below it sacrifices throughput, while operating above it over-provisions concurrency and reduces robustness to traffic surges.
+
+    Because `maxBatchSize` is the search ceiling, give `/optimize` a generous value (e.g. 256 below) rather than a tight production batch cap — if the ceiling is set near the true optimum, the search has no room to descend and `concurrency` simply pins to `maxBatchSize`. (This is why reusing the shared `examples/problem-data.json`, whose `maxBatchSize` is 48, yields `concurrency: 48` in `examples/solution-optimize.json`: 48 is the ceiling, not a discovered optimum.)
+
+    ``` json
+    {
+    "maxBatchSize": 256,
+    "AvgInputTokens": 128,
+    "AvgOutputTokens": 512,
+    "alpha": 12,
+    "beta": 0.05,
+    "gamma": 0.0005,
+    "maxQueueSize": 128,
+    "targetTTFT": 60.0,
+    "targetITL": 20.0
+    }
+    ```
+
+    The output reports the chosen `concurrency` (the optimal max batch size), the queue metrics at that operating point, the closed-form brackets `M_ITL` / `M_TPF` that guide the search, and the number of `oracleCalls` (model evaluations) the search needed. Note how the chosen concurrency (49) sits well below the search ceiling (256): only 49 concurrent requests are needed to reach near-peak throughput within the SLO.
+
+    ``` json
+    {
+    "concurrency": 49,
+    "throughput": 2.9715836,
+    "avgRespTime": 10277.985,
+    "avgWaitTime": 12.017578,
+    "avgNumInServ": 30.50618,
+    "avgTTFT": 57.9873,
+    "avgITL": 19.999996,
+    "maxRPS": 3.9003835,
+    "M_ITL": 31,
+    "M_TPF": 164,
+    "oracleCalls": 8,
+    "feasible": true
+    }
+    ```
+
 ## Installation
 
 The server may run in the following ways.
@@ -164,6 +221,8 @@ Then, the server may be invoked as follows.
 curl -X POST http://localhost:8080/solve -d @<problem-data-json-file>
 
 curl -X POST http://localhost:8080/target -d @<problem-data-json-file>
+
+curl -X POST http://localhost:8080/optimize -d @<problem-data-json-file>
 ```
 
 - Data in command line
@@ -176,6 +235,10 @@ curl -X POST http://localhost:8080/solve \
 curl -X POST http://localhost:8080/target \
   --header "Content-Type: application/json" \
   --data '{"alpha": 8.0, "beta": 0.1, "maxBatchSize": 24, "maxQueueSize": 1000, "avgInputTokens": 256, "avgOutputTokens": 512, "targetTTFT": 45, "targetITL": 12}' | jq
+
+curl -X POST http://localhost:8080/optimize \
+  --header "Content-Type: application/json" \
+  --data '{"alpha": 8.0, "beta": 0.1, "maxBatchSize": 256, "maxQueueSize": 1000, "avgInputTokens": 256, "avgOutputTokens": 512, "targetTTFT": 45, "targetITL": 12}' | jq
 ```
 
 ## Description
@@ -184,11 +247,14 @@ The model analyzer maintains an analytical performance model for each variant (s
 
 ![description](docs/model-analyzer.png)
 
-The purpose of using a performance model is twofold.
+The purpose of using a performance model is threefold.
 
 - Performance evaluation: Estimate performance metrics such as waiting time, TTFT, ITL, and TPOT, as a function of a given load and server characteristics.
 
 - Target sizing: Determine load and/or server characteristics in order to attain target values of performance metrics.
-The former is used to estimate performance given the current and/or predicted/anticipated environment. Whereas, the latter is mainly used by the Optimizer to assess maximum request rate to guarantee given SLOs, as well as the impact of a choice of a particular GPU type.
+
+- Concurrency optimization: Determine the minimum concurrency (max batch size) that reaches near-peak throughput while honoring the SLOs, so the server runs neither under-batched (sacrificing throughput) nor over-provisioned (fragile to traffic surges).
+
+The first is used to estimate performance given the current and/or predicted/anticipated environment. The second is mainly used by the Optimizer to assess maximum request rate to guarantee given SLOs, as well as the impact of a choice of a particular GPU type. The third is used by the Optimizer to set the concurrency level of a server, and by the control loop to demonstrate the value of concurrency control.
 
 Typically, analytical performance models have their own internal parameters. For example, a model might approximate ITL, as a function of the batch size, by a linear function. The base and slope of the linear function are parameters of the model. In this case, the determination of such parameters may be achieved through offline benchmarking and/or online through observations and tuning (dynamic adjustment of parameter values to match observations).

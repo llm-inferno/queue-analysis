@@ -17,6 +17,7 @@ The model is used for:
 
 - analysis: evaluate performance metrics given load
 - sizing: evaluate max request rate to achieve a given target performance
+- concurrency optimization: find the minimum concurrency (max batch size) that reaches near-peak throughput while meeting given SLO targets (`OptimalConcurrency`)
 
 The model may be used for different scenarios by setting the number of tokens:
 

@@ -35,6 +35,22 @@ type AnalysisData struct {
 	RPSTargetITL  float32 `json:"RPSTargetITL"`  // throughput to achieve target ITL (requests/sec)
 }
 
+// optimal-concurrency output data
+type OptimizeData struct {
+	Concurrency  int     `json:"concurrency"`  // M*: min concurrency for near-peak throughput under SLO
+	Throughput   float32 `json:"throughput"`   // f(M*) (requests/sec)
+	AvgRespTime  float32 `json:"avgRespTime"`  // average response time at M* (msec)
+	AvgWaitTime  float32 `json:"avgWaitTime"`  // average queueing time at M* (msec)
+	AvgNumInServ float32 `json:"avgNumInServ"` // average number of requests in service at M*
+	AvgTTFT      float32 `json:"avgTTFT"`      // average time to first token at M* (msec)
+	AvgITL       float32 `json:"avgITL"`       // average inter-token latency at M* (msec)
+	MaxRPS       float32 `json:"maxRPS"`       // maximum throughput at M* (requests/sec)
+	MITL         int     `json:"M_ITL"`        // closed-form ITL-binding bracket
+	MTPF         int     `json:"M_TPF"`        // closed-form TTFT-prefill-binding bracket
+	Calls        int     `json:"oracleCalls"`  // feasible oracle calls
+	Feasible     bool    `json:"feasible"`
+}
+
 // REST server for llm inference server analysis
 type Analyzer struct {
 	router *gin.Engine
@@ -47,6 +63,7 @@ func NewAnalyzer() *Analyzer {
 	}
 	analyzer.router.POST("/solve", solve)
 	analyzer.router.POST("/target", target)
+	analyzer.router.POST("/optimize", optimize)
 	return analyzer
 }
 
@@ -160,6 +177,55 @@ func target(c *gin.Context) {
 		RPSTargetITL:  targetRate.RateTargetITL,
 	}
 	c.IndentedJSON(http.StatusOK, analysisData)
+}
+
+// find minimum concurrency for near-peak throughput under SLO targets
+func optimize(c *gin.Context) {
+	pd := ProblemData{}
+	if err := c.BindJSON(&pd); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "binding error: " + err.Error()})
+		return
+	}
+	if !IsValid(&pd) {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "data error: invalid input data"})
+		return
+	}
+
+	// maxBatchSize is interpreted as the search upper bound m_max.
+	queueAnalyzer := CreateQueueAnalyzer(&pd)
+	if queueAnalyzer == nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "NewLLMQueueAnalyzer() failed"})
+		return
+	}
+
+	targetPerf := &analyzer.TargetPerf{
+		TargetTTFT: pd.TargetTTFT,
+		TargetITL:  pd.TargetITL,
+		TargetTPS:  0, // not used in this service
+	}
+	result, err := queueAnalyzer.OptimalConcurrency(targetPerf)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "OptimalConcurrency() failed: " + err.Error()})
+		return
+	}
+
+	data := &OptimizeData{
+		Concurrency: result.Concurrency,
+		Throughput:  result.Throughput,
+		MITL:        result.MITL,
+		MTPF:        result.MTPF,
+		Calls:       result.Calls,
+		Feasible:    result.Feasible,
+	}
+	if result.Metrics != nil {
+		data.AvgRespTime = result.Metrics.AvgRespTime
+		data.AvgWaitTime = result.Metrics.AvgWaitTime
+		data.AvgNumInServ = result.Metrics.AvgNumInServ
+		data.AvgTTFT = result.Metrics.AvgTTFT
+		data.AvgITL = result.Metrics.AvgTokenTime
+		data.MaxRPS = result.Metrics.MaxRate
+	}
+	c.IndentedJSON(http.StatusOK, data)
 }
 
 // create queue analyzer from problem data
