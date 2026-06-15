@@ -23,10 +23,10 @@ type ConcurrencyOptimizer struct {
 	Target       *TargetPerf
 	MaxNumTokens int // chunk math; default DefaultMaxNumTokens
 	MaxQueueSize int
-	MMin         int     // default DefaultMMin
-	MMax         int     // default DefaultMMax; also the high anchor
-	Epsilon      float32 // default DefaultOnsetEpsilon
-	MaxIters     int     // default DefaultOnsetMaxIters
+	MMin         int               // default DefaultMMin
+	MMax         int               // default DefaultMMax; also the high anchor
+	Epsilon      float32           // default DefaultOnsetEpsilon
+	MaxIters     int               // default DefaultOnsetMaxIters
 	Oracle       ConcurrencyOracle // nil => Size()-based default oracle
 
 	oracleIsDefault bool // set in applyDefaults; gates Metrics population

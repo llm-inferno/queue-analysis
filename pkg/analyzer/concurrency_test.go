@@ -60,9 +60,9 @@ func TestFindFullyInfeasibleReturnsMMin(t *testing.T) {
 	sp, rs := baselineParts()
 	o := &ConcurrencyOptimizer{
 		ServiceParms: sp, RequestSize: rs,
-		Target:   &TargetPerf{TargetTTFT: 60, TargetITL: 20},
-		MMin:     1, MMax: 256,
-		Oracle:   func(m int) (float32, bool) { return 0, false }, // infeasible everywhere
+		Target: &TargetPerf{TargetTTFT: 60, TargetITL: 20},
+		MMin:   1, MMax: 256,
+		Oracle: func(m int) (float32, bool) { return 0, false }, // infeasible everywhere
 	}
 	res, err := o.Find()
 	if err != nil {
@@ -80,9 +80,9 @@ func TestFindUnboundedReturnsMMaxInTwoCalls(t *testing.T) {
 	// no descent: anchor + confirmatory = 2 feasible calls, M* = 256.
 	o := &ConcurrencyOptimizer{
 		ServiceParms: sp, RequestSize: rs,
-		Target:   &TargetPerf{TargetTTFT: 1e9, TargetITL: 1e9},
-		MMin:     1, MMax: 256,
-		Oracle:   func(m int) (float32, bool) { return 1.0, true }, // flat plateau
+		Target: &TargetPerf{TargetTTFT: 1e9, TargetITL: 1e9},
+		MMin:   1, MMax: 256,
+		Oracle: func(m int) (float32, bool) { return 1.0, true }, // flat plateau
 	}
 	res, err := o.Find()
 	if err != nil {

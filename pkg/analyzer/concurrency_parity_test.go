@@ -134,6 +134,9 @@ func TestFormulaGuidedParity(t *testing.T) {
 		if res.Calls != g.Calls {
 			t.Errorf("%s/%s: calls got %d, want %d", g.Set, g.Scenario, res.Calls, g.Calls)
 		}
+		// Go's Feasible is f(M*)>0 (oracle at the chosen point); the golden's is
+		// f_truth>0 (the scenario peak). These coincide for monotone-to-plateau f:
+		// peak>0 iff the chosen point >0, and infeasible-everywhere drives both to 0.
 		if res.Feasible != g.Feasible {
 			t.Errorf("%s/%s: feasible got %v, want %v", g.Set, g.Scenario, res.Feasible, g.Feasible)
 		}
