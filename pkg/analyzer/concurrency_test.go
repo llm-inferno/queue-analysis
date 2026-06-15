@@ -48,3 +48,58 @@ func TestOnsetSearchRespectsBracketAndIterCap(t *testing.T) {
 		t.Errorf("degenerate bracket: got %d, want 7", got)
 	}
 }
+
+// baselineParts returns realistic params (the "baseline" dev scenario) so the
+// closed-form bracket computes against real primitives.
+func baselineParts() (*ServiceParms, *RequestSize) {
+	return &ServiceParms{Alpha: 8, Beta: 0.033, Gamma: 0.000333},
+		&RequestSize{AvgInputTokens: 256, AvgOutputTokens: 1024}
+}
+
+func TestFindFullyInfeasibleReturnsMMin(t *testing.T) {
+	sp, rs := baselineParts()
+	o := &ConcurrencyOptimizer{
+		ServiceParms: sp, RequestSize: rs,
+		Target:   &TargetPerf{TargetTTFT: 60, TargetITL: 20},
+		MMin:     1, MMax: 256,
+		Oracle:   func(m int) (float32, bool) { return 0, false }, // infeasible everywhere
+	}
+	res, err := o.Find()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Concurrency != 1 || res.Feasible || res.Calls != 0 {
+		t.Errorf("got M=%d feasible=%v calls=%d, want 1/false/0",
+			res.Concurrency, res.Feasible, res.Calls)
+	}
+}
+
+func TestFindUnboundedReturnsMMaxInTwoCalls(t *testing.T) {
+	sp, rs := baselineParts()
+	// Huge targets => nothing binds => M_ITL = M_TPF = MMax => lo == hi == 256,
+	// no descent: anchor + confirmatory = 2 feasible calls, M* = 256.
+	o := &ConcurrencyOptimizer{
+		ServiceParms: sp, RequestSize: rs,
+		Target:   &TargetPerf{TargetTTFT: 1e9, TargetITL: 1e9},
+		MMin:     1, MMax: 256,
+		Oracle:   func(m int) (float32, bool) { return 1.0, true }, // flat plateau
+	}
+	res, err := o.Find()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Concurrency != 256 || !res.Feasible || res.Calls != 2 {
+		t.Errorf("got M=%d feasible=%v calls=%d, want 256/true/2",
+			res.Concurrency, res.Feasible, res.Calls)
+	}
+	if res.MITL != 256 || res.MTPF != 256 {
+		t.Errorf("brackets: got M_ITL=%d M_TPF=%d, want 256/256", res.MITL, res.MTPF)
+	}
+}
+
+func TestFindRejectsMissingInputs(t *testing.T) {
+	o := &ConcurrencyOptimizer{} // no ServiceParms/RequestSize/Target
+	if _, err := o.Find(); err == nil {
+		t.Error("expected error for missing inputs, got nil")
+	}
+}

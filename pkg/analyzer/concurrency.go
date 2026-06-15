@@ -1,5 +1,7 @@
 package analyzer
 
+import "fmt"
+
 // Onset-search defaults (paper: epsilon = 0.02, MaxIters = 6, bounds [1, 256]).
 const (
 	DefaultOnsetEpsilon  = float32(0.02)
@@ -96,8 +98,121 @@ func onsetSearch(oracle func(m int) float32, threshold float32, lo, hi, maxIters
 	return hi
 }
 
-// defaultOracle is implemented in Task 2 (Size()-based). Stub here so the
-// package compiles; replaced with the real implementation next task.
+// check validates that the required input pointers are set and well-formed.
+func (o *ConcurrencyOptimizer) check() error {
+	if o.ServiceParms == nil || o.RequestSize == nil || o.Target == nil {
+		return fmt.Errorf("optimizer requires ServiceParms, RequestSize, and Target")
+	}
+	if err := o.RequestSize.check(); err != nil {
+		return err
+	}
+	return o.Target.check()
+}
+
+// closedFormBrackets computes (M_ITL, M_TPF) from the service model alone — the
+// largest batch sizes in [1, MMax] whose closed-form itl / ttft-prefill stays
+// within target. Zero oracle calls. Reuses itlNew / prefillNew at the real
+// per-B chunk count from NumIterationsPerPrefill.
+func (o *ConcurrencyOptimizer) closedFormBrackets() (mITL, mTPF int) {
+	cfg := &Configuration{
+		MaxBatchSize: o.MMax,
+		MaxNumTokens: o.MaxNumTokens,
+		ServiceParms: o.ServiceParms,
+	}
+	numChunks := NumIterationsPerPrefill(cfg, o.RequestSize)
+	itl := func(B int) float32 {
+		return itlNew(o.ServiceParms, o.RequestSize, float32(B), numChunks[B])
+	}
+	tpf := func(B int) float32 {
+		return prefillNew(o.ServiceParms, o.RequestSize, float32(B), numChunks[B])
+	}
+	mITL = largestFeasibleBatch(itl, o.Target.TargetITL, o.MMax)
+	mTPF = largestFeasibleBatch(tpf, o.Target.TargetTTFT, o.MMax)
+	return mITL, mTPF
+}
+
+// Find runs the formula-guided onset search and returns M* with diagnostics.
+func (o *ConcurrencyOptimizer) Find() (*ConcurrencyResult, error) {
+	if err := o.check(); err != nil {
+		return nil, err
+	}
+	o.applyDefaults()
+
+	res := &ConcurrencyResult{Probes: []int{}}
+	res.MITL, res.MTPF = o.closedFormBrackets()
+
+	// A counting wrapper: records every probe; counts a call only when the
+	// reading is feasible (throughput > 0), matching the Python harness.
+	probe := func(m int) float32 {
+		res.Probes = append(res.Probes, m)
+		thr, _ := o.Oracle(m)
+		if thr > 0 {
+			res.Calls++
+		}
+		return thr
+	}
+
+	// High anchor: f* at m_max, always on the plateau for a monotone-to-plateau
+	// f. A constraint-endpoint seed can undershoot the peak (RP-2).
+	seed := o.MMax
+	fstar := probe(seed)
+	res.AnchorThroughput = fstar
+	if fstar <= 0 {
+		// Infeasible everywhere: truth convention sets M_truth = m_min.
+		res.Concurrency = o.MMin
+		res.Feasible = false
+		return res, nil
+	}
+
+	threshold := (1 - o.Epsilon/2) * fstar
+	lo := max(o.MMin, min(res.MITL, res.MTPF))
+	U := max(res.MITL, res.MTPF)
+	hi := min(seed, max(3*U, lo+1), o.MMax)
+	hi = max(lo, hi)
+
+	hi = onsetSearch(probe, threshold, lo, hi, o.MaxIters)
+
+	mStar := max(o.MMin, min(o.MMax, hi))
+	res.Concurrency = mStar
+
+	// Confirmatory call through the oracle (counted if feasible).
+	res.Throughput = probe(mStar)
+	res.Feasible = res.Throughput > 0
+	if res.Feasible && o.oracleIsDefault {
+		// Re-solve at M* for full metrics: the ConcurrencyOracle contract
+		// returns only throughput, so the default oracle's solve at mStar is
+		// not reused here. One extra deterministic solve; acceptable.
+		res.Metrics = o.sizeAt(mStar)
+	}
+	return res, nil
+}
+
+// defaultOracle: f(M) = throughput from Size() at MaxBatchSize = M.
 func (o *ConcurrencyOptimizer) defaultOracle(m int) (float32, bool) {
-	return 0, false
+	metrics := o.sizeAt(m)
+	if metrics == nil || metrics.Throughput <= 0 {
+		return 0, false
+	}
+	return metrics.Throughput, true
+}
+
+// sizeAt builds an analyzer at MaxBatchSize = m and returns its SLO-bound
+// operating-point metrics, or nil if construction / sizing fails (mirrors
+// /target HTTP 400).
+func (o *ConcurrencyOptimizer) sizeAt(m int) *AnalysisMetrics {
+	cfg := &Configuration{
+		MaxBatchSize: m,
+		MaxNumTokens: o.MaxNumTokens,
+		MaxQueueSize: o.MaxQueueSize,
+		ServiceParms: o.ServiceParms,
+	}
+	qa, err := NewLLMQueueAnalyzer(cfg, o.RequestSize)
+	if err != nil {
+		return nil
+	}
+	_, metrics, _, err := qa.Size(o.Target)
+	if err != nil {
+		return nil
+	}
+	return metrics
 }
