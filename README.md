@@ -133,6 +133,8 @@ There are three operations:
 
     Find the minimum request concurrency (max batch size) that achieves near-maximum request throughput while still meeting the target performance values for TTFT and ITL. Here `maxBatchSize` is interpreted as the search upper bound (the largest concurrency to consider); the returned `concurrency` is the smallest batch-size limit that reaches near-peak throughput under the SLO. Operating below it sacrifices throughput, while operating above it over-provisions concurrency and reduces robustness to traffic surges.
 
+    Because `maxBatchSize` is the search ceiling, give `/optimize` a generous value (e.g. 256 below) rather than a tight production batch cap — if the ceiling is set near the true optimum, the search has no room to descend and `concurrency` simply pins to `maxBatchSize`. (This is why reusing the shared `examples/problem-data.json`, whose `maxBatchSize` is 48, yields `concurrency: 48` in `examples/solution-optimize.json`: 48 is the ceiling, not a discovered optimum.)
+
     ``` json
     {
     "maxBatchSize": 256,
