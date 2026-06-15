@@ -103,3 +103,28 @@ func TestFindRejectsMissingInputs(t *testing.T) {
 		t.Error("expected error for missing inputs, got nil")
 	}
 }
+
+func TestOptimalConcurrencyMethodBaseline(t *testing.T) {
+	sp, rs := baselineParts()
+	cfg := &Configuration{MaxBatchSize: 256, MaxQueueSize: 128, ServiceParms: sp}
+	qa, err := NewLLMQueueAnalyzer(cfg, rs)
+	if err != nil {
+		t.Fatalf("NewLLMQueueAnalyzer: %v", err)
+	}
+	res, err := qa.OptimalConcurrency(&TargetPerf{TargetTTFT: 60, TargetITL: 20})
+	if err != nil {
+		t.Fatalf("OptimalConcurrency: %v", err)
+	}
+	if !res.Feasible {
+		t.Fatal("baseline should be feasible")
+	}
+	if res.Concurrency < 1 || res.Concurrency > 256 {
+		t.Errorf("M*=%d out of [1,256]", res.Concurrency)
+	}
+	if res.Metrics == nil {
+		t.Error("default-oracle path should populate Metrics")
+	}
+	if res.Calls > 8 {
+		t.Errorf("call budget exceeded: %d > 8", res.Calls)
+	}
+}

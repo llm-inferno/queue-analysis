@@ -196,6 +196,22 @@ func (o *ConcurrencyOptimizer) defaultOracle(m int) (float32, bool) {
 	return metrics.Throughput, true
 }
 
+// OptimalConcurrency finds the minimum concurrency (max batch size) achieving
+// near-peak throughput under the given SLO targets. It uses the analyzer's own
+// service/request parameters and its MaxBatchSize as the upper bound m_max.
+func (qa *LLMQueueAnalyzer) OptimalConcurrency(target *TargetPerf) (*ConcurrencyResult, error) {
+	opt := &ConcurrencyOptimizer{
+		ServiceParms: qa.ServiceParms,
+		RequestSize:  qa.RequestSize,
+		Target:       target,
+		MaxNumTokens: qa.MaxNumTokens,
+		MaxQueueSize: qa.MaxQueueSize,
+		MMin:         DefaultMMin,
+		MMax:         qa.MaxBatchSize,
+	}
+	return opt.Find()
+}
+
 // sizeAt builds an analyzer at MaxBatchSize = m and returns its SLO-bound
 // operating-point metrics, or nil if construction / sizing fails (mirrors
 // /target HTTP 400).
