@@ -29,3 +29,6 @@ nous/.venv/
 
 # Local reference papers (external/copyrighted PDFs)
 docs/references/
+
+# Generated demo output (Excel lock files already covered by ~* above)
+demos/curve/curve.csv
